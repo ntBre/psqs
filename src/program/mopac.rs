@@ -155,51 +155,36 @@ impl Program for Mopac {
     /// input file with external=paramfile. Also update self.paramfile to point
     /// to the generated name for the parameter file
     fn write_input(&mut self, proc: Procedure) {
+        let mut header = String::new();
         match proc {
             Procedure::Opt => todo!(),
             Procedure::Freq => todo!(),
             Procedure::SinglePt => {
-                if !self.params.atoms.is_empty() {
-                    let mut s = DefaultHasher::new();
-                    self.filename.hash(&mut s);
-                    self.param_file =
-                        format!("{}/{}", self.param_dir, s.finish());
-                    self.write_params(&self.param_file);
-                    let geom = geom_string(&self.geom);
-                    let mut file =
-                        File::create(format!("{}.mop", self.filename))
-                            .expect("failed to create input file");
-                    write!(
-                        file,
-                        "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 \
-	     charge={charge} external={paramfile}
-Comment line 1
-Comment line 2
-{geom}
-",
-                        paramfile = self.param_file,
-                        charge = self.charge,
-                    )
-                    .expect("failed to write input file");
-                } else {
-                    let geom = geom_string(&self.geom);
-                    let mut file =
-                        File::create(format!("{}.mop", self.filename))
-                            .expect("failed to create input file");
-                    write!(
-                        file,
-                        "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 \
-	     charge={charge}
-Comment line 1
-Comment line 2
-{geom}
-",
-                        charge = self.charge,
-                    )
-                    .expect("failed to write input file");
-                }
+                header.push_str(&format!(
+                    "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 charge={}",
+                    self.charge
+                ));
             }
         }
+        if !self.params.atoms.is_empty() {
+            let mut s = DefaultHasher::new();
+            self.filename.hash(&mut s);
+            self.param_file = format!("{}/{}", self.param_dir, s.finish());
+            self.write_params(&self.param_file);
+            header.push_str(&format!(" external={}", self.param_file));
+        }
+        let geom = geom_string(&self.geom);
+        let mut file = File::create(format!("{}.mop", self.filename))
+            .expect("failed to create input file");
+        write!(
+            file,
+            "{header}
+Comment line 1
+Comment line 2
+{geom}
+",
+        )
+        .expect("failed to write input file");
     }
 
     /// Reads a MOPAC output file. If normal termination occurs, also try
