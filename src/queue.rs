@@ -105,7 +105,8 @@ where
         chunk_num: usize,
         slurm_jobs: &'a mut HashMap<String, usize>,
     ) {
-        let queue_file = format!("{}/main{}.{}", Self::DIR, chunk_num, Self::SCRIPT_EXT);
+        let queue_file =
+            format!("{}/main{}.{}", Self::DIR, chunk_num, Self::SCRIPT_EXT);
         let jl = jobs.len();
         let mut filenames = Vec::with_capacity(jl);
         for job in &mut *jobs {
@@ -166,23 +167,36 @@ where
                         let mut count = match slurm_jobs.get_mut(job_name) {
                             Some(n) => *n,
                             None => {
-                                eprintln!("failed to find {} in slurm_jobs", job_name);
+                                eprintln!(
+                                    "failed to find {} in slurm_jobs",
+                                    job_name
+                                );
                                 1
                             }
                         };
                         count -= 1;
                         if count == 0 {
                             // delete the submit script
-                            dump.add(vec![job_name.to_string(), format!("{}.out", job_name)]);
+                            dump.add(vec![
+                                job_name.to_string(),
+                                format!("{}.out", job_name),
+                            ]);
                         }
                     }
                     e => {
                         // just overwrite the existing job with the resubmitted
                         // version
                         if !qstat.contains(&job.job_id) {
-                            eprintln!("resubmitting {} for {:?}", job.program.filename(), e);
-                            let resub =
-                                format!("{}.{}", job.program.filename(), job.program.extension());
+                            eprintln!(
+                                "resubmitting {} for {:?}",
+                                job.program.filename(),
+                                e
+                            );
+                            let resub = format!(
+                                "{}.{}",
+                                job.program.filename(),
+                                job.program.extension()
+                            );
                             let Resubmit {
                                 inp_file,
                                 pbs_file,
@@ -209,7 +223,9 @@ where
             if finished == 0 {
                 eprintln!("{} jobs remaining", remaining);
                 qstat = self.status();
-                thread::sleep(time::Duration::from_secs(self.sleep_int() as u64));
+                thread::sleep(time::Duration::from_secs(
+                    self.sleep_int() as u64
+                ));
             } else if finished > remaining / 10 {
                 eprintln!("{} jobs remaining", remaining);
             }

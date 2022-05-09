@@ -15,7 +15,8 @@ impl<P: Program + Clone> Queue<P> for LocalQueue {
             body.push_str(&format!("/opt/mopac/mopac {f}.mop\n"));
         }
         body.push_str(&format!("date +%s\n"));
-        let mut file = File::create(filename).expect("failed to create params file");
+        let mut file =
+            File::create(filename).expect("failed to create params file");
         write!(file, "{}", body).expect("failed to write params file");
     }
 

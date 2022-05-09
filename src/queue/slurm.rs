@@ -44,7 +44,9 @@ impl Queue<Mopac> for Slurm {
 export LD_LIBRARY_PATH=/home/qc/mopac2016/\n",
         );
         for f in infiles {
-            body.push_str(&format!("/home/qc/mopac2016/MOPAC2016.exe {f}.mop\n"));
+            body.push_str(&format!(
+                "/home/qc/mopac2016/MOPAC2016.exe {f}.mop\n"
+            ));
         }
         let mut file = match File::create(filename) {
             Ok(f) => f,
@@ -87,6 +89,7 @@ export LD_LIBRARY_PATH=/home/qc/mopac2016/\n",
             Ok(status) => status,
             Err(e) => panic!("failed to run squeue with {}", e),
         };
-        String::from_utf8(status.stdout).expect("failed to convert squeue output to String")
+        String::from_utf8(status.stdout)
+            .expect("failed to convert squeue output to String")
     }
 }

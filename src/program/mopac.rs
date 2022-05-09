@@ -34,7 +34,11 @@ impl ToString for Params {
         let mut ret = String::new();
         for (i, n) in self.names.iter().enumerate() {
             ret.push_str(
-                &format!("{:<8}{:>8}{:20.12}\n", n, self.atoms[i], self.values[i]).to_string(),
+                &format!(
+                    "{:<8}{:>8}{:20.12}\n",
+                    n, self.atoms[i], self.values[i]
+                )
+                .to_string(),
             );
         }
         ret
@@ -69,14 +73,22 @@ impl PartialEq for Params {
 }
 
 impl Params {
-    pub fn new(names: Vec<String>, atoms: Vec<String>, values: na::DVector<f64>) -> Self {
+    pub fn new(
+        names: Vec<String>,
+        atoms: Vec<String>,
+        values: na::DVector<f64>,
+    ) -> Self {
         Self {
             names,
             atoms,
             values,
         }
     }
-    pub fn from(names: Vec<String>, atoms: Vec<String>, values: Vec<f64>) -> Self {
+    pub fn from(
+        names: Vec<String>,
+        atoms: Vec<String>,
+        values: Vec<f64>,
+    ) -> Self {
         Self {
             names,
             atoms,
@@ -84,7 +96,11 @@ impl Params {
         }
     }
 
-    pub fn from_literal(names: Vec<&str>, atoms: Vec<&str>, values: Vec<f64>) -> Self {
+    pub fn from_literal(
+        names: Vec<&str>,
+        atoms: Vec<&str>,
+        values: Vec<f64>,
+    ) -> Self {
         Self {
             names: names.iter().map(|s| s.to_string()).collect(),
             atoms: atoms.iter().map(|s| s.to_string()).collect(),
@@ -143,8 +159,8 @@ impl Program for Mopac {
         self.param_file = paramfile;
         self.write_params();
         let geom = geom_string(&self.geom);
-        let mut file =
-            File::create(format!("{}.mop", self.filename)).expect("failed to create input file");
+        let mut file = File::create(format!("{}.mop", self.filename))
+            .expect("failed to create input file");
         write!(
             file,
             "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 \
@@ -208,7 +224,12 @@ Comment line 2
 }
 
 impl Mopac {
-    pub fn new(filename: String, params: Rc<Params>, geom: Rc<Vec<Atom>>, charge: isize) -> Self {
+    pub fn new(
+        filename: String,
+        params: Rc<Params>,
+        geom: Rc<Vec<Atom>>,
+        charge: isize,
+    ) -> Self {
         Self {
             filename,
             params,
@@ -270,11 +291,12 @@ mod tests {
 
     fn test_mopac() -> Mopac {
         let names = vec![
-            "USS", "ZS", "BETAS", "GSS", "USS", "UPP", "ZS", "ZP", "BETAS", "BETAP", "GSS", "GPP",
-            "GSP", "GP2", "HSP",
+            "USS", "ZS", "BETAS", "GSS", "USS", "UPP", "ZS", "ZP", "BETAS",
+            "BETAP", "GSS", "GPP", "GSP", "GP2", "HSP",
         ];
         let atoms = vec![
-            "H", "H", "H", "H", "C", "C", "C", "C", "C", "C", "C", "C", "C", "C", "C",
+            "H", "H", "H", "H", "C", "C", "C", "C", "C", "C", "C", "C", "C",
+            "C", "C",
         ];
         let values = vec![
             -11.246958000000,
@@ -328,7 +350,8 @@ Comment line 2
         let mut tm = test_mopac();
         tm.param_file = String::from("/tmp/params.dat");
         tm.write_params();
-        let got = fs::read_to_string("/tmp/params.dat").expect("file not found");
+        let got =
+            fs::read_to_string("/tmp/params.dat").expect("file not found");
         let want = "USS            H    -11.246958000000
 ZS             H      1.268641000000
 BETAS          H     -8.352984000000
@@ -396,7 +419,8 @@ HSP            C      0.717322000000
             for f in infiles {
                 body.push_str(&format!("echo {f}\n"));
             }
-            let mut file = File::create(filename).expect("failed to create params file");
+            let mut file =
+                File::create(filename).expect("failed to create params file");
             write!(file, "{}", body).expect("failed to write params file");
         }
 
@@ -456,7 +480,8 @@ HSP            C      0.717322000000
         };
         assert_eq!(got, want);
 
-        for f in vec!["/tmp/job.mop", "/tmp/job_redo.mop", "/tmp/job_redo.pbs"] {
+        for f in vec!["/tmp/job.mop", "/tmp/job_redo.mop", "/tmp/job_redo.pbs"]
+        {
             std::fs::remove_file(f).unwrap();
         }
     }

@@ -47,6 +47,3 @@ impl<P: Program> Job<P> {
         }
     }
 }
-
-
-

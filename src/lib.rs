@@ -1,6 +1,6 @@
 pub mod atom;
-pub mod queue;
 pub mod program;
+pub mod queue;
 
 mod dump;
 
