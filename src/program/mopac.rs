@@ -287,6 +287,10 @@ impl Mopac {
 mod tests {
     use std::fs::{self, read_to_string};
 
+    use crate::string;
+
+    use crate::queue::{self, Queue};
+
     use super::*;
 
     fn test_mopac() -> Mopac {
@@ -376,7 +380,7 @@ HSP            C      0.717322000000
     fn test_read_output() {
         // success
         let mp = Mopac::new(
-            String::from("test_files/job"),
+            String::from("testfiles/job"),
             Rc::new(Params::default()),
             Rc::new(Vec::new()),
             0,
@@ -391,7 +395,7 @@ HSP            C      0.717322000000
 
         // failure in output
         let mp = Mopac::new(
-            String::from("test_files/nojob"),
+            String::from("testfiles/nojob"),
             Rc::new(Params::default()),
             Rc::new(Vec::new()),
             0,
@@ -401,7 +405,7 @@ HSP            C      0.717322000000
 
         // failure in aux
         let mp = Mopac::new(
-            String::from("test_files/noaux"),
+            String::from("testfiles/noaux"),
             Rc::new(Params::default()),
             Rc::new(Vec::new()),
             0,
@@ -465,7 +469,7 @@ HSP            C      0.717322000000
     fn test_resubmit() {
         use std::path::Path;
         let tq = TestQueue;
-        std::fs::copy("test_files/job.mop", "/tmp/job.mop").unwrap();
+        std::fs::copy("testfiles/job.mop", "/tmp/job.mop").unwrap();
         let got = tq.resubmit("/tmp/job.mop");
         assert!(Path::new("/tmp/job_redo.mop").exists());
         assert!(Path::new("/tmp/job_redo.pbs").exists());
