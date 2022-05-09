@@ -9,6 +9,13 @@ pub enum ProgramStatus {
     EnergyParseError,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum Procedure {
+    Opt,
+    Freq,
+    SinglePt,
+}
+
 pub trait Program {
     fn filename(&self) -> String;
 
@@ -18,21 +25,25 @@ pub trait Program {
 
     fn charge(&self) -> isize;
 
-    fn write_input(&mut self);
+    fn write_input(&mut self, proc: Procedure);
 
-    fn read_output(&self) -> ProgramStatus;
+    fn read_output(&self, proc: Procedure) -> ProgramStatus;
 
-    /// Return all the filenames associated with the Program
+    /// Return all the filenames associated with the Program for deletion when
+    /// it finishes
     fn associated_files(&self) -> Vec<String>;
 }
 
-// TODO move this into a separate file
 #[derive(Debug, Clone)]
 pub struct Job<P: Program> {
     pub program: P,
     pub pbs_file: String,
     pub job_id: String,
+
+    /// the index in the output array to store the result
     pub index: usize,
+
+    /// the coefficient to multiply by when storing the result
     pub coeff: f64,
 }
 

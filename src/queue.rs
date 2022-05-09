@@ -6,7 +6,7 @@ use std::{
     str, thread,
 };
 
-use crate::program::{Program, ProgramStatus};
+use crate::program::{Procedure, Program, ProgramStatus};
 use crate::{dump::Dump, program::Job};
 
 pub mod local;
@@ -110,7 +110,7 @@ where
         let jl = jobs.len();
         let mut filenames = Vec::with_capacity(jl);
         for job in &mut *jobs {
-            job.program.write_input();
+            job.program.write_input(Procedure::SinglePt);
             job.pbs_file = queue_file.to_string();
             filenames.push(job.program.filename());
         }
@@ -156,7 +156,7 @@ where
             let mut finished = 0;
             let mut to_remove = Vec::new();
             for (i, job) in cur_jobs.iter_mut().enumerate() {
-                match job.program.read_output() {
+                match job.program.read_output(Procedure::SinglePt) {
                     ProgramStatus::Success(val) => {
                         to_remove.push(i);
                         dst[job.index] += job.coeff * val;

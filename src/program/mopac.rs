@@ -9,6 +9,8 @@ use std::rc::Rc;
 
 use nalgebra as na;
 
+use super::Procedure;
+
 /// kcal/mol per hartree
 const KCALHT: f64 = 627.5091809;
 
@@ -152,59 +154,90 @@ impl Program for Mopac {
     /// Writes the parameters of self to a parameter file, then writes the MOPAC
     /// input file with external=paramfile. Also update self.paramfile to point
     /// to the generated name for the parameter file
-    fn write_input(&mut self) {
-        let mut s = DefaultHasher::new();
-        self.filename.hash(&mut s);
-        let paramfile = format!("{}/{}", self.param_dir, s.finish());
-        self.param_file = paramfile;
-        self.write_params();
-        let geom = geom_string(&self.geom);
-        let mut file = File::create(format!("{}.mop", self.filename))
-            .expect("failed to create input file");
-        write!(
-            file,
-            "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 \
-	     external={paramfile} charge={charge}
+    fn write_input(&mut self, proc: Procedure) {
+        match proc {
+            Procedure::Opt => todo!(),
+            Procedure::Freq => todo!(),
+            Procedure::SinglePt => {
+                if !self.params.atoms.is_empty() {
+                    let mut s = DefaultHasher::new();
+                    self.filename.hash(&mut s);
+                    self.param_file =
+                        format!("{}/{}", self.param_dir, s.finish());
+                    self.write_params(&self.param_file);
+                    let geom = geom_string(&self.geom);
+                    let mut file =
+                        File::create(format!("{}.mop", self.filename))
+                            .expect("failed to create input file");
+                    write!(
+                        file,
+                        "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 \
+	     charge={charge} external={paramfile}
 Comment line 1
 Comment line 2
 {geom}
 ",
-            paramfile = self.param_file,
-            charge = self.charge,
-        )
-        .expect("failed to write input file");
+                        paramfile = self.param_file,
+                        charge = self.charge,
+                    )
+                    .expect("failed to write input file");
+                } else {
+                    let geom = geom_string(&self.geom);
+                    let mut file =
+                        File::create(format!("{}.mop", self.filename))
+                            .expect("failed to create input file");
+                    write!(
+                        file,
+                        "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 \
+	     charge={charge}
+Comment line 1
+Comment line 2
+{geom}
+",
+                        charge = self.charge,
+                    )
+                    .expect("failed to write input file");
+                }
+            }
+        }
     }
 
     /// Reads a MOPAC output file. If normal termination occurs, also try
     /// reading the `.aux` file to extract the energy from there. This function
     /// panics if an error is found in the output file. If a non-fatal error
     /// occurs (file not found, not written to yet, etc) None is returned.
-    fn read_output(&self) -> ProgramStatus {
-        let outfile = format!("{}.out", &self.filename);
-        let f = match File::open(&outfile) {
-            Ok(file) => file,
-            Err(_) => {
-                return ProgramStatus::FileNotFound;
-            } // file not found
-        };
-        let mut f = BufReader::new(f);
-        let mut line = String::new();
-        while let Ok(b) = f.read_line(&mut line) {
-            if b == 0 {
-                break;
+    fn read_output(&self, proc: Procedure) -> ProgramStatus {
+        match proc {
+            Procedure::Opt => todo!(),
+            Procedure::Freq => todo!(),
+            Procedure::SinglePt => {
+                let outfile = format!("{}.out", &self.filename);
+                let f = match File::open(&outfile) {
+                    Ok(file) => file,
+                    Err(_) => {
+                        return ProgramStatus::FileNotFound;
+                    } // file not found
+                };
+                let mut f = BufReader::new(f);
+                let mut line = String::new();
+                while let Ok(b) = f.read_line(&mut line) {
+                    if b == 0 {
+                        break;
+                    }
+                    line.make_ascii_uppercase();
+                    if let Some(_) = line.find("PANIC") {
+                        eprintln!("panic requested in read_output");
+                        std::process::exit(1)
+                    } else if let Some(_) = line.find("ERROR") {
+                        return ProgramStatus::ErrorInOutput;
+                    } else if let Some(_) = line.find(" == MOPAC DONE ==") {
+                        return self.read_aux();
+                    }
+                    line.clear();
+                }
+                ProgramStatus::EnergyNotFound
             }
-            line.make_ascii_uppercase();
-            if let Some(_) = line.find("PANIC") {
-                eprintln!("panic requested in read_output");
-                std::process::exit(1)
-            } else if let Some(_) = line.find("ERROR") {
-                return ProgramStatus::ErrorInOutput;
-            } else if let Some(_) = line.find(" == MOPAC DONE ==") {
-                return self.read_aux();
-            }
-            line.clear();
         }
-        ProgramStatus::EnergyNotFound
     }
 
     fn associated_files(&self) -> Vec<String> {
@@ -240,13 +273,12 @@ impl Mopac {
         }
     }
 
-    fn write_params(&self) {
-        let mut body = String::new();
-        body.push_str(&self.params.to_string());
-        let mut file = match File::create(&self.param_file) {
+    fn write_params(&self, filename: &str) {
+        let body = String::from(&self.params.to_string());
+        let mut file = match File::create(filename) {
             Ok(f) => f,
             Err(e) => {
-                eprintln!("failed to create {} with {}", self.param_file, e);
+                eprintln!("failed to create {} with {}", filename, e);
                 std::process::exit(1);
             }
         };
@@ -333,17 +365,38 @@ mod tests {
 
     #[test]
     fn test_write_input() {
-        let mut tm = test_mopac();
+        let mut tm = Mopac {
+            params: Rc::new(Params::default()),
+            ..test_mopac()
+        };
         tm.param_dir = "/tmp".to_string();
-        tm.write_input();
+        tm.write_input(Procedure::SinglePt);
         let got = fs::read_to_string("/tmp/test.mop").expect("file not found");
         let want = format!(
-            "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 external={paramfile} charge=0
+            "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 charge=0
 Comment line 1
 Comment line 2
 
 ",
-            paramfile = tm.param_file
+        );
+        assert_eq!(got, want);
+        fs::remove_file("/tmp/test.mop").unwrap();
+    }
+
+    #[test]
+    fn test_write_input_with_params() {
+        let mut tm = test_mopac();
+        tm.param_dir = "/tmp".to_string();
+        tm.write_input(Procedure::SinglePt);
+        let got = fs::read_to_string("/tmp/test.mop").expect("file not found");
+        let want = format!(
+            "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 charge=0 \
+	     external={}
+Comment line 1
+Comment line 2
+
+",
+            tm.param_file,
         );
         assert_eq!(got, want);
         fs::remove_file("/tmp/test.mop").unwrap();
@@ -351,9 +404,8 @@ Comment line 2
 
     #[test]
     fn test_write_params() {
-        let mut tm = test_mopac();
-        tm.param_file = String::from("/tmp/params.dat");
-        tm.write_params();
+        let tm = test_mopac();
+        tm.write_params(&String::from("/tmp/params.dat"));
         let got =
             fs::read_to_string("/tmp/params.dat").expect("file not found");
         let want = "USS            H    -11.246958000000
@@ -385,7 +437,9 @@ HSP            C      0.717322000000
             Rc::new(Vec::new()),
             0,
         );
-        let got = if let ProgramStatus::Success(v) = mp.read_output() {
+        let got = if let ProgramStatus::Success(v) =
+            mp.read_output(Procedure::SinglePt)
+        {
             v
         } else {
             panic!()
@@ -400,7 +454,7 @@ HSP            C      0.717322000000
             Rc::new(Vec::new()),
             0,
         );
-        let got = mp.read_output();
+        let got = mp.read_output(Procedure::SinglePt);
         assert_eq!(got, ProgramStatus::EnergyNotFound);
 
         // failure in aux
@@ -410,7 +464,7 @@ HSP            C      0.717322000000
             Rc::new(Vec::new()),
             0,
         );
-        let got = mp.read_output();
+        let got = mp.read_output(Procedure::SinglePt);
         assert_eq!(got, ProgramStatus::EnergyNotFound);
     }
 
