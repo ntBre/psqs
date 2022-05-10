@@ -15,7 +15,7 @@ pub enum ProgramStatus {
     EnergyParseError,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Procedure {
     Opt,
     Freq,

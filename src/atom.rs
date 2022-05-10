@@ -22,11 +22,37 @@ impl ToString for Atom {
     }
 }
 
-pub fn geom_string(geom: &Vec<Atom>) -> String {
+#[derive(Debug)]
+pub enum Geom {
+    Xyz(Vec<Atom>),
+    Zmat(String),
+}
+
+impl Geom {
+    pub fn xyz(&self) -> Option<&Vec<Atom>> {
+        match &self {
+            Geom::Xyz(x) => Some(x),
+            Geom::Zmat(_) => None,
+        }
+    }
+    pub fn zmat(&self) -> Option<&String> {
+        match &self {
+            Geom::Zmat(x) => Some(x),
+            Geom::Xyz(_) => None,
+        }
+    }
+}
+
+pub fn geom_string(geom: &Geom) -> String {
     use std::fmt::Write;
     let mut ret = String::new();
-    for g in geom {
-        write!(ret, "{}\n", g.to_string()).unwrap();
+    match geom {
+        Geom::Xyz(geom) => {
+            for g in geom {
+                write!(ret, "{}\n", g.to_string()).unwrap();
+            }
+        }
+        Geom::Zmat(geom) => ret.push_str(&geom),
     }
     ret
 }

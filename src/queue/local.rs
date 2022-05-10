@@ -6,7 +6,9 @@ use crate::queue::Queue;
 
 /// Minimal implementation for testing MOPAC locally
 #[derive(Debug)]
-pub struct LocalQueue;
+pub struct LocalQueue {
+    pub dir: String,
+}
 
 impl<P: Program + Clone> Queue<P> for LocalQueue {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
@@ -15,9 +17,9 @@ impl<P: Program + Clone> Queue<P> for LocalQueue {
             body.push_str(&format!("/opt/mopac/mopac {f}.mop\n"));
         }
         body.push_str(&format!("date +%s\n"));
-        let mut file =
-            File::create(filename).expect("failed to create params file");
-        write!(file, "{}", body).expect("failed to write params file");
+        let mut file = File::create(filename)
+            .expect(&format!("failed to create submit script `{filename}`"));
+        write!(file, "{}", body).expect("failed to write submit script");
     }
 
     fn submit_command(&self) -> &str {
@@ -38,7 +40,9 @@ impl<P: Program + Clone> Queue<P> for LocalQueue {
 
     const SCRIPT_EXT: &'static str = "slurm";
 
-    const DIR: &'static str = "inp";
+    fn dir(&self) -> &str {
+        &self.dir
+    }
 
     fn stat_cmd(&self) -> String {
         todo!()

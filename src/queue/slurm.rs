@@ -76,7 +76,9 @@ export LD_LIBRARY_PATH=/home/qc/mopac2016/\n",
 
     const SCRIPT_EXT: &'static str = "slurm";
 
-    const DIR: &'static str = "inp";
+    fn dir(&self) -> &str {
+        "inp"
+    }
 
     fn stat_cmd(&self) -> String {
         let user = std::env::vars()

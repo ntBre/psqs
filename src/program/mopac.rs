@@ -1,4 +1,4 @@
-use crate::atom::{geom_string, Atom};
+use crate::atom::{geom_string, Geom};
 use crate::program::{Program, ProgramStatus};
 
 use std::collections::hash_map::DefaultHasher;
@@ -29,7 +29,7 @@ pub struct Mopac {
     /// The initial geometry for the calculation. These are also wrapped in an
     /// Rc to avoid allocating multiple copies for calculations with the same
     /// geometry.
-    pub geom: Rc<Vec<Atom>>,
+    pub geom: Rc<Geom>,
     pub param_file: String,
     pub param_dir: String,
     pub charge: isize,
@@ -144,7 +144,7 @@ impl Mopac {
     pub fn new(
         filename: String,
         params: Option<Rc<Params>>,
-        geom: Rc<Vec<Atom>>,
+        geom: Rc<Geom>,
         charge: isize,
     ) -> Self {
         Self {
@@ -238,22 +238,13 @@ mod tests {
             "H", "H", "H", "H", "C", "C", "C", "C", "C", "C", "C", "C", "C",
             "C", "C",
         ];
+        #[rustfmt::skip]
         let values = vec![
-            -11.246958000000,
-            1.268641000000,
-            -8.352984000000,
-            14.448686000000,
-            -51.089653000000,
-            -39.937920000000,
-            2.047558000000,
-            1.702841000000,
-            -15.385236000000,
-            -7.471929000000,
-            13.335519000000,
-            10.778326000000,
-            11.528134000000,
-            9.486212000000,
-            0.717322000000,
+            -11.246958000000, 1.268641000000, -8.352984000000,
+            14.448686000000, -51.089653000000, -39.937920000000,
+            2.047558000000, 1.702841000000, -15.385236000000,
+            -7.471929000000, 13.335519000000, 10.778326000000,
+            11.528134000000, 9.486212000000, 0.717322000000,
         ];
         Mopac::new(
             String::from("/tmp/test"),
@@ -262,7 +253,7 @@ mod tests {
                 atoms.iter().map(|s| s.to_string()).collect(),
                 values,
             ))),
-            Rc::new(Vec::new()),
+            Rc::new(Geom::Xyz(Vec::new())),
             0,
         )
     }
@@ -341,7 +332,7 @@ HSP            C      0.717322000000
         let mp = Mopac::new(
             String::from("testfiles/job"),
             None,
-            Rc::new(Vec::new()),
+            Rc::new(Geom::Xyz(Vec::new())),
             0,
         );
         let got = mp.read_output().unwrap().energy;
@@ -352,7 +343,7 @@ HSP            C      0.717322000000
         let mp = Mopac::new(
             String::from("testfiles/opt"),
             None,
-            Rc::new(Vec::new()),
+            Rc::new(Geom::Xyz(Vec::new())),
             1,
         );
         let got = mp.read_output().unwrap().cart_geom;
@@ -389,7 +380,7 @@ HSP            C      0.717322000000
         let mp = Mopac::new(
             String::from("testfiles/nojob"),
             None,
-            Rc::new(Vec::new()),
+            Rc::new(Geom::Xyz(Vec::new())),
             0,
         );
         let got = mp.read_output();
@@ -399,7 +390,7 @@ HSP            C      0.717322000000
         let mp = Mopac::new(
             String::from("testfiles/noaux"),
             None,
-            Rc::new(Vec::new()),
+            Rc::new(Geom::Xyz(Vec::new())),
             0,
         );
         let got = mp.read_output();
@@ -438,7 +429,9 @@ HSP            C      0.717322000000
 
         const SCRIPT_EXT: &'static str = "pbs";
 
-        const DIR: &'static str = "inp";
+        fn dir(&self) -> &str {
+            "inp"
+        }
 
         fn stat_cmd(&self) -> String {
             todo!()

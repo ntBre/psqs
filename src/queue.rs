@@ -28,7 +28,7 @@ where
     /// the extension to append to submit scripts for this type of Queue
     const SCRIPT_EXT: &'static str;
 
-    const DIR: &'static str = "inp";
+    fn dir(&self) -> &str;
 
     fn write_submit_script(&self, infiles: &[String], filename: &str);
 
@@ -104,13 +104,14 @@ where
         jobs: &mut [Job<P>],
         chunk_num: usize,
         slurm_jobs: &'a mut HashMap<String, usize>,
+        proc: Procedure,
     ) {
         let queue_file =
-            format!("{}/main{}.{}", Self::DIR, chunk_num, Self::SCRIPT_EXT);
+            format!("{}/main{}.{}", self.dir(), chunk_num, Self::SCRIPT_EXT);
         let jl = jobs.len();
         let mut filenames = Vec::with_capacity(jl);
         for job in &mut *jobs {
-            job.program.write_input(Procedure::SinglePt);
+            job.program.write_input(proc);
             job.pbs_file = queue_file.to_string();
             filenames.push(job.program.filename());
         }
@@ -123,7 +124,7 @@ where
         }
     }
 
-    fn drain(&self, jobs: &mut Vec<Job<P>>, dst: &mut [f64]) {
+    fn drain(&self, jobs: &mut [Job<P>], dst: &mut [f64], proc: Procedure) {
         let mut chunk_num: usize = 0;
         let mut cur_jobs = Vec::new();
         let mut slurm_jobs = HashMap::new();
@@ -137,7 +138,12 @@ where
             while cur_jobs.len() < self.job_limit() {
                 match chunks.next() {
                     Some(jobs) => {
-                        self.build_chunk(jobs, chunk_num, &mut slurm_jobs);
+                        self.build_chunk(
+                            jobs,
+                            chunk_num,
+                            &mut slurm_jobs,
+                            proc,
+                        );
                         let job_id = jobs[0].job_id.clone();
                         qstat.insert(job_id);
                         if DEBUG {
