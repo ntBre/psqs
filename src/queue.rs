@@ -6,7 +6,10 @@ use std::{
     str, thread,
 };
 
-use crate::program::{Procedure, Program};
+use crate::{
+    atom::Geom,
+    program::{Procedure, Program, ProgramStatus},
+};
 use crate::{dump::Dump, program::Job};
 
 pub mod local;
@@ -124,7 +127,60 @@ where
         }
     }
 
-    fn drain(&self, jobs: &mut [Job<P>], dst: &mut [f64], proc: Procedure) {
+    fn drain_err_case(
+        &self,
+        e: ProgramStatus,
+        qstat: &mut HashSet<String>,
+        slurm_jobs: &mut HashMap<String, usize>,
+        job: &mut Job<P>,
+    ) {
+        // just overwrite the existing job with the resubmitted
+        // version
+        if !qstat.contains(&job.job_id) {
+            eprintln!("resubmitting {} for {:?}", job.program.filename(), e);
+            let resub = format!(
+                "{}.{}",
+                job.program.filename(),
+                job.program.extension()
+            );
+            let Resubmit {
+                inp_file,
+                pbs_file,
+                job_id,
+            } = self.resubmit(&resub);
+            job.program.set_filename(&inp_file);
+            job.pbs_file = pbs_file.clone();
+            slurm_jobs.insert(pbs_file, 1);
+            qstat.insert(job_id.clone());
+            job.job_id = job_id;
+        }
+    }
+
+    /// optimize is a stripped-down version of `drain` that runs a single job
+    /// and returns the optimized geometry
+    fn optimize(&self, job: Job<P>) -> Geom {
+        let mut slurm_jobs = HashMap::new();
+        let mut qstat = HashSet::<String>::new();
+        let mut jobs = [job];
+        self.build_chunk(&mut jobs, 0, &mut slurm_jobs, Procedure::Opt);
+        qstat.insert(jobs[0].job_id.clone());
+        loop {
+            match jobs[0].program.read_output() {
+                Ok(res) => return Geom::Xyz(res.cart_geom),
+                Err(e) => self.drain_err_case(
+                    e,
+                    &mut qstat,
+                    &mut slurm_jobs,
+                    &mut jobs[0],
+                ),
+            }
+            // only reached if unsuccessful so sleep
+            qstat = self.status();
+            thread::sleep(time::Duration::from_secs(self.sleep_int() as u64));
+        }
+    }
+
+    fn drain(&self, jobs: &mut [Job<P>], dst: &mut [f64]) {
         let mut chunk_num: usize = 0;
         let mut cur_jobs = Vec::new();
         let mut slurm_jobs = HashMap::new();
@@ -142,7 +198,7 @@ where
                             jobs,
                             chunk_num,
                             &mut slurm_jobs,
-                            proc,
+                            Procedure::SinglePt,
                         );
                         let job_id = jobs[0].job_id.clone();
                         qstat.insert(job_id);
@@ -190,30 +246,12 @@ where
                         }
                     }
                     Err(e) => {
-                        // just overwrite the existing job with the resubmitted
-                        // version
-                        if !qstat.contains(&job.job_id) {
-                            eprintln!(
-                                "resubmitting {} for {:?}",
-                                job.program.filename(),
-                                e
-                            );
-                            let resub = format!(
-                                "{}.{}",
-                                job.program.filename(),
-                                job.program.extension()
-                            );
-                            let Resubmit {
-                                inp_file,
-                                pbs_file,
-                                job_id,
-                            } = self.resubmit(&resub);
-                            job.program.set_filename(&inp_file);
-                            job.pbs_file = pbs_file.clone();
-                            slurm_jobs.insert(pbs_file, 1);
-                            qstat.insert(job_id.clone());
-                            job.job_id = job_id;
-                        }
+                        self.drain_err_case(
+                            e,
+                            &mut qstat,
+                            &mut slurm_jobs,
+                            job,
+                        );
                     }
                 }
             }

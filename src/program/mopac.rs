@@ -1,4 +1,4 @@
-use crate::atom::{geom_string, Geom};
+use crate::atom::{geom_string, Atom, Geom};
 use crate::program::{Program, ProgramStatus};
 
 use std::collections::hash_map::DefaultHasher;
@@ -189,6 +189,11 @@ impl Mopac {
         };
         let mut ok = false;
         let mut in_geom = false;
+        let mut in_labels = false;
+        // atomic labels
+        let mut labels = Vec::new();
+        // coordinates
+        let mut coords: Vec<Vec<f64>> = Vec::new();
         for line in lines {
             // line like HEAT_OF_FORMATION:KCAL/MOL=+0.97127947459164715838D+02
             if line.contains("HEAT_OF_FORMATION") {
@@ -207,13 +212,24 @@ impl Mopac {
             } else if in_geom && line.contains("ATOM_CHARGES") {
                 in_geom = false;
             } else if in_geom {
-                res.cart_geom.push(
+                coords.push(
                     line.split_whitespace()
                         .map(|s| s.parse().unwrap())
                         .collect(),
                 );
                 ok = true;
+            } else if line.contains("ATOM_EL") {
+                in_labels = true;
+            } else if in_labels {
+                labels = line
+                    .split_whitespace()
+                    .map(str::to_string)
+                    .collect::<Vec<_>>();
+                in_labels = false;
             }
+        }
+        for (c, coord) in coords.iter().enumerate() {
+            res.cart_geom.push(Atom::new(&labels[c], coord.to_vec()));
         }
         if ok {
             Ok(res)
@@ -360,31 +376,46 @@ HSP            C      0.717322000000
         );
         let got = mp.read_output().unwrap().cart_geom;
         let want = vec![
-            vec![
-                0.000000000000000000,
-                0.000000000000000000,
-                0.000000000000000000,
-            ],
-            vec![
-                1.436199643883821153,
-                0.000000000000000000,
-                0.000000000000000000,
-            ],
-            vec![
-                0.799331622330450298,
-                1.193205084901411750,
-                0.000000000000000000,
-            ],
-            vec![
-                2.360710453618393156,
-                -0.506038360297709655,
-                0.000000000000026804,
-            ],
-            vec![
-                0.893457241509136857,
-                2.242936206295408574,
-                -0.000000000000026804,
-            ],
+            Atom::new(
+                "C",
+                vec![
+                    0.000000000000000000,
+                    0.000000000000000000,
+                    0.000000000000000000,
+                ],
+            ),
+            Atom::new(
+                "C",
+                vec![
+                    1.436199643883821153,
+                    0.000000000000000000,
+                    0.000000000000000000,
+                ],
+            ),
+            Atom::new(
+                "C",
+                vec![
+                    0.799331622330450298,
+                    1.193205084901411750,
+                    0.000000000000000000,
+                ],
+            ),
+            Atom::new(
+                "H",
+                vec![
+                    2.360710453618393156,
+                    -0.506038360297709655,
+                    0.000000000000026804,
+                ],
+            ),
+            Atom::new(
+                "H",
+                vec![
+                    0.893457241509136857,
+                    2.242936206295408574,
+                    -0.000000000000026804,
+                ],
+            ),
         ];
         assert_eq!(got, want);
 

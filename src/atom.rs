@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Atom {
     pub label: String,
     pub coord: Vec<f64>,

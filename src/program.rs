@@ -1,10 +1,12 @@
+use crate::atom::Atom;
+
 pub mod mopac;
 
 // TODO these should maybe be Options or even an Enum, but it makes the API
 // pretty painful
 pub struct ProgramResult {
     pub energy: f64,
-    pub cart_geom: Vec<Vec<f64>>,
+    pub cart_geom: Vec<Atom>,
 }
 
 #[derive(Debug, PartialEq)]
