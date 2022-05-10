@@ -41,6 +41,19 @@ impl Geom {
             Geom::Xyz(_) => None,
         }
     }
+
+    pub fn is_xyz(&self) -> bool {
+        match &self {
+            Geom::Xyz(_) => true,
+            _ => false,
+        }
+    }
+    pub fn is_zmat(&self) -> bool {
+        match &self {
+            Geom::Zmat(_) => true,
+            _ => false,
+        }
+    }
 }
 
 pub fn geom_string(geom: &Geom) -> String {
