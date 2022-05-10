@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use nalgebra as na;
 
-use super::Procedure;
+use super::{Procedure, ProgramResult};
 
 /// kcal/mol per hartree
 const KCALHT: f64 = 627.5091809;
@@ -155,9 +155,17 @@ impl Program for Mopac {
     /// input file with external=paramfile. Also update self.paramfile to point
     /// to the generated name for the parameter file
     fn write_input(&mut self, proc: Procedure) {
+        // TODO this is going to have to accept or at least use a template
+        // eventually, probably by calling a .default method or something
         let mut header = String::new();
         match proc {
-            Procedure::Opt => todo!(),
+            Procedure::Opt => {
+                // optimization is the default, so just take out 1SCF
+                header.push_str(&format!(
+                    "XYZ A0 scfcrt=1.D-21 aux(precision=14) PM6 charge={}",
+                    self.charge
+                ));
+            }
             Procedure::Freq => todo!(),
             Procedure::SinglePt => {
                 header.push_str(&format!(
@@ -191,38 +199,32 @@ Comment line 2
     /// reading the `.aux` file to extract the energy from there. This function
     /// panics if an error is found in the output file. If a non-fatal error
     /// occurs (file not found, not written to yet, etc) None is returned.
-    fn read_output(&self, proc: Procedure) -> ProgramStatus {
-        match proc {
-            Procedure::Opt => todo!(),
-            Procedure::Freq => todo!(),
-            Procedure::SinglePt => {
-                let outfile = format!("{}.out", &self.filename);
-                let f = match File::open(&outfile) {
-                    Ok(file) => file,
-                    Err(_) => {
-                        return ProgramStatus::FileNotFound;
-                    } // file not found
-                };
-                let mut f = BufReader::new(f);
-                let mut line = String::new();
-                while let Ok(b) = f.read_line(&mut line) {
-                    if b == 0 {
-                        break;
-                    }
-                    line.make_ascii_uppercase();
-                    if let Some(_) = line.find("PANIC") {
-                        eprintln!("panic requested in read_output");
-                        std::process::exit(1)
-                    } else if let Some(_) = line.find("ERROR") {
-                        return ProgramStatus::ErrorInOutput;
-                    } else if let Some(_) = line.find(" == MOPAC DONE ==") {
-                        return self.read_aux();
-                    }
-                    line.clear();
-                }
-                ProgramStatus::EnergyNotFound
+    fn read_output(&self) -> Result<ProgramResult, ProgramStatus> {
+        let outfile = format!("{}.out", &self.filename);
+        let f = match File::open(&outfile) {
+            Ok(file) => file,
+            Err(_) => {
+                return Err(ProgramStatus::FileNotFound);
+            } // file not found
+        };
+        let mut f = BufReader::new(f);
+        let mut line = String::new();
+        while let Ok(b) = f.read_line(&mut line) {
+            if b == 0 {
+                break;
             }
+            line.make_ascii_uppercase();
+            if let Some(_) = line.find("PANIC") {
+                eprintln!("panic requested in read_output");
+                std::process::exit(1)
+            } else if let Some(_) = line.find("ERROR") {
+                return Err(ProgramStatus::ErrorInOutput);
+            } else if let Some(_) = line.find(" == MOPAC DONE ==") {
+                return self.read_aux();
+            }
+            line.clear();
         }
+        Err(ProgramStatus::EnergyNotFound)
     }
 
     fn associated_files(&self) -> Vec<String> {
@@ -271,32 +273,51 @@ impl Mopac {
     }
 
     /// return the heat of formation from a MOPAC aux file in Hartrees
-    fn read_aux(&self) -> ProgramStatus {
+    fn read_aux(&self) -> Result<ProgramResult, ProgramStatus> {
         let auxfile = format!("{}.aux", &self.filename);
-        let f = if let Ok(file) = File::open(auxfile) {
+        let f = if let Ok(file) = File::open(&auxfile) {
             file
         } else {
-            return ProgramStatus::FileNotFound;
+            return Err(ProgramStatus::FileNotFound);
         };
-        let mut f = BufReader::new(f);
-        let mut line = String::new();
-        while let Ok(b) = f.read_line(&mut line) {
-            if b == 0 {
-                break;
-            }
+        let lines = BufReader::new(f).lines().flatten();
+        let mut res = ProgramResult {
+            energy: 0.0,
+            cart_geom: Vec::new(),
+        };
+        let mut ok = false;
+        let mut in_geom = false;
+        for line in lines {
             // line like HEAT_OF_FORMATION:KCAL/MOL=+0.97127947459164715838D+02
             if line.contains("HEAT_OF_FORMATION") {
                 let fields: Vec<&str> = line.trim().split("=").collect();
                 match fields[1].replace("D", "E").parse::<f64>() {
-                    Ok(f) => return ProgramStatus::Success(f / KCALHT),
+                    Ok(f) => {
+                        res.energy = f / KCALHT;
+                        ok = true;
+                    }
                     Err(_) => {
-                        return ProgramStatus::EnergyParseError;
+                        return Err(ProgramStatus::EnergyParseError);
                     }
                 }
+            } else if line.contains("ATOM_X_OPT") {
+                in_geom = true;
+            } else if in_geom && line.contains("ATOM_CHARGES") {
+                in_geom = false;
+            } else if in_geom {
+                res.cart_geom.push(
+                    line.split_whitespace()
+                        .map(|s| s.parse().unwrap())
+                        .collect(),
+                );
+                ok = true;
             }
-            line.clear();
         }
-        ProgramStatus::EnergyNotFound
+        if ok {
+            Ok(res)
+        } else {
+            Err(ProgramStatus::EnergyNotFound)
+        }
     }
 }
 
@@ -422,15 +443,46 @@ HSP            C      0.717322000000
             Rc::new(Vec::new()),
             0,
         );
-        let got = if let ProgramStatus::Success(v) =
-            mp.read_output(Procedure::SinglePt)
-        {
-            v
-        } else {
-            panic!()
-        };
+        let got = mp.read_output().unwrap().energy;
         let want = 0.97127947459164715838e+02 / KCALHT;
         assert!((got - want).abs() < 1e-20);
+
+        // opt success
+        let mp = Mopac::new(
+            String::from("testfiles/opt"),
+            Rc::new(Params::default()),
+            Rc::new(Vec::new()),
+            1,
+        );
+        let got = mp.read_output().unwrap().cart_geom;
+        let want = vec![
+            vec![
+                0.000000000000000000,
+                0.000000000000000000,
+                0.000000000000000000,
+            ],
+            vec![
+                1.436199643883821153,
+                0.000000000000000000,
+                0.000000000000000000,
+            ],
+            vec![
+                0.799331622330450298,
+                1.193205084901411750,
+                0.000000000000000000,
+            ],
+            vec![
+                2.360710453618393156,
+                -0.506038360297709655,
+                0.000000000000026804,
+            ],
+            vec![
+                0.893457241509136857,
+                2.242936206295408574,
+                -0.000000000000026804,
+            ],
+        ];
+        assert_eq!(got, want);
 
         // failure in output
         let mp = Mopac::new(
@@ -439,8 +491,8 @@ HSP            C      0.717322000000
             Rc::new(Vec::new()),
             0,
         );
-        let got = mp.read_output(Procedure::SinglePt);
-        assert_eq!(got, ProgramStatus::EnergyNotFound);
+        let got = mp.read_output();
+        assert_eq!(got.err().unwrap(), ProgramStatus::EnergyNotFound);
 
         // failure in aux
         let mp = Mopac::new(
@@ -449,8 +501,8 @@ HSP            C      0.717322000000
             Rc::new(Vec::new()),
             0,
         );
-        let got = mp.read_output(Procedure::SinglePt);
-        assert_eq!(got, ProgramStatus::EnergyNotFound);
+        let got = mp.read_output();
+        assert_eq!(got.err().unwrap(), ProgramStatus::FileNotFound);
     }
 
     /// minimal queue for testing general submission

@@ -6,7 +6,7 @@ use std::{
     str, thread,
 };
 
-use crate::program::{Procedure, Program, ProgramStatus};
+use crate::program::{Procedure, Program};
 use crate::{dump::Dump, program::Job};
 
 pub mod local;
@@ -156,10 +156,10 @@ where
             let mut finished = 0;
             let mut to_remove = Vec::new();
             for (i, job) in cur_jobs.iter_mut().enumerate() {
-                match job.program.read_output(Procedure::SinglePt) {
-                    ProgramStatus::Success(val) => {
+                match job.program.read_output() {
+                    Ok(res) => {
                         to_remove.push(i);
-                        dst[job.index] += job.coeff * val;
+                        dst[job.index] += job.coeff * res.energy;
                         dump.add(job.program.associated_files());
                         finished += 1;
                         remaining -= 1;
@@ -183,7 +183,7 @@ where
                             ]);
                         }
                     }
-                    e => {
+                    Err(e) => {
                         // just overwrite the existing job with the resubmitted
                         // version
                         if !qstat.contains(&job.job_id) {

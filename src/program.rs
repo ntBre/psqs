@@ -1,8 +1,14 @@
 pub mod mopac;
 
+// TODO these should maybe be Options or even an Enum, but it makes the API
+// pretty painful
+pub struct ProgramResult {
+    pub energy: f64,
+    pub cart_geom: Vec<Vec<f64>>,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum ProgramStatus {
-    Success(f64),
     FileNotFound,
     ErrorInOutput,
     EnergyNotFound,
@@ -27,7 +33,7 @@ pub trait Program {
 
     fn write_input(&mut self, proc: Procedure);
 
-    fn read_output(&self, proc: Procedure) -> ProgramStatus;
+    fn read_output(&self) -> Result<ProgramResult, ProgramStatus>;
 
     /// Return all the filenames associated with the Program for deletion when
     /// it finishes
