@@ -127,7 +127,7 @@ pub struct Mopac {
     /// keyword. These are wrapped in an Rc to allow the same set of parameters
     /// to be shared between calculations without an expensive `clone`
     /// operation.
-    pub params: Rc<Params>,
+    pub params: Option<Rc<Params>>,
     /// The initial geometry for the calculation. These are also wrapped in an
     /// Rc to avoid allocating multiple copies for calculations with the same
     /// geometry.
@@ -174,11 +174,11 @@ impl Program for Mopac {
                 ));
             }
         }
-        if !self.params.atoms.is_empty() {
+        if let Some(params) = &self.params {
             let mut s = DefaultHasher::new();
             self.filename.hash(&mut s);
             self.param_file = format!("{}/{}", self.param_dir, s.finish());
-            self.write_params(&self.param_file);
+            Self::write_params(params, &self.param_file);
             header.push_str(&format!(" external={}", self.param_file));
         }
         let geom = geom_string(&self.geom);
@@ -246,7 +246,7 @@ Comment line 2
 impl Mopac {
     pub fn new(
         filename: String,
-        params: Rc<Params>,
+        params: Option<Rc<Params>>,
         geom: Rc<Vec<Atom>>,
         charge: isize,
     ) -> Self {
@@ -260,8 +260,8 @@ impl Mopac {
         }
     }
 
-    fn write_params(&self, filename: &str) {
-        let body = String::from(&self.params.to_string());
+    fn write_params(params: &Rc<Params>, filename: &str) {
+        let body = String::from(params.to_string());
         let mut file = match File::create(filename) {
             Ok(f) => f,
             Err(e) => {
@@ -359,11 +359,11 @@ mod tests {
         ];
         Mopac::new(
             String::from("/tmp/test"),
-            Rc::new(Params::from(
+            Some(Rc::new(Params::from(
                 names.iter().map(|s| s.to_string()).collect(),
                 atoms.iter().map(|s| s.to_string()).collect(),
                 values,
-            )),
+            ))),
             Rc::new(Vec::new()),
             0,
         )
@@ -372,7 +372,7 @@ mod tests {
     #[test]
     fn test_write_input() {
         let mut tm = Mopac {
-            params: Rc::new(Params::default()),
+            params: None,
             ..test_mopac()
         };
         tm.param_dir = "/tmp".to_string();
@@ -411,7 +411,10 @@ Comment line 2
     #[test]
     fn test_write_params() {
         let tm = test_mopac();
-        tm.write_params(&String::from("/tmp/params.dat"));
+        Mopac::write_params(
+            &tm.params.unwrap(),
+            &String::from("/tmp/params.dat"),
+        );
         let got =
             fs::read_to_string("/tmp/params.dat").expect("file not found");
         let want = "USS            H    -11.246958000000
@@ -439,7 +442,7 @@ HSP            C      0.717322000000
         // success
         let mp = Mopac::new(
             String::from("testfiles/job"),
-            Rc::new(Params::default()),
+            None,
             Rc::new(Vec::new()),
             0,
         );
@@ -450,7 +453,7 @@ HSP            C      0.717322000000
         // opt success
         let mp = Mopac::new(
             String::from("testfiles/opt"),
-            Rc::new(Params::default()),
+            None,
             Rc::new(Vec::new()),
             1,
         );
@@ -487,7 +490,7 @@ HSP            C      0.717322000000
         // failure in output
         let mp = Mopac::new(
             String::from("testfiles/nojob"),
-            Rc::new(Params::default()),
+            None,
             Rc::new(Vec::new()),
             0,
         );
@@ -497,7 +500,7 @@ HSP            C      0.717322000000
         // failure in aux
         let mp = Mopac::new(
             String::from("testfiles/noaux"),
-            Rc::new(Params::default()),
+            None,
             Rc::new(Vec::new()),
             0,
         );
