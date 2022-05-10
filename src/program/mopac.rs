@@ -7,7 +7,7 @@ use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Write};
 use std::rc::Rc;
 
-use super::{Procedure, ProgramResult};
+use super::{Procedure, ProgramResult, Template};
 
 /// kcal/mol per hartree
 const KCALHT: f64 = 627.5091809;
@@ -33,6 +33,7 @@ pub struct Mopac {
     pub param_file: String,
     pub param_dir: String,
     pub charge: isize,
+    pub template: &'static Template<'static>,
 }
 
 impl Program for Mopac {
@@ -44,6 +45,10 @@ impl Program for Mopac {
         self.filename = String::from(filename);
     }
 
+    fn template(&self) -> &Template {
+        self.template
+    }
+
     fn extension(&self) -> String {
         String::from("mop")
     }
@@ -52,23 +57,18 @@ impl Program for Mopac {
     /// input file with external=paramfile. Also update self.paramfile to point
     /// to the generated name for the parameter file
     fn write_input(&mut self, proc: Procedure) {
-        // TODO this is going to have to accept or at least use a template
-        // eventually, probably by calling a .default method or something
-        let mut header = String::new();
+        // header should look like
+        //   scfcrt=1.D-21 aux(precision=14) PM6
+        // so that the charge, and optionally XYZ, A0, and 1SCF can be added
+        let mut header = String::from(self.template().header);
+        header.push_str(&format!(" charge={}", self.charge));
         match proc {
             Procedure::Opt => {
-                // optimization is the default, so just take out 1SCF
-                header.push_str(&format!(
-                    "XYZ A0 scfcrt=1.D-21 aux(precision=14) PM6 charge={}",
-                    self.charge
-                ));
+                // optimization is the default, so just don't add 1SCF
             }
             Procedure::Freq => todo!(),
             Procedure::SinglePt => {
-                header.push_str(&format!(
-                    "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 charge={}",
-                    self.charge
-                ));
+                header.push_str(" 1SCF");
             }
         }
         if let Some(params) = &self.params {
@@ -77,6 +77,9 @@ impl Program for Mopac {
             self.param_file = format!("{}/{}", self.param_dir, s.finish());
             Self::write_params(params, &self.param_file);
             header.push_str(&format!(" external={}", self.param_file));
+        }
+        if self.geom.is_xyz() {
+            header.push_str(" XYZ");
         }
         let geom = geom_string(&self.geom);
         let mut file = File::create(format!("{}.mop", self.filename))
@@ -146,6 +149,7 @@ impl Mopac {
         params: Option<Rc<Params>>,
         geom: Rc<Geom>,
         charge: isize,
+        template: &'static Template,
     ) -> Self {
         Self {
             filename,
@@ -154,6 +158,7 @@ impl Mopac {
             param_file: String::new(),
             param_dir: "tmparam".to_string(),
             charge,
+            template,
         }
     }
 
@@ -229,6 +234,10 @@ mod tests {
 
     use super::*;
 
+    static TEST_TMPL: Template = Template {
+        header: "scfcrt=1.D-21 aux(precision=14) PM6 A0",
+    };
+
     fn test_mopac() -> Mopac {
         let names = vec![
             "USS", "ZS", "BETAS", "GSS", "USS", "UPP", "ZS", "ZP", "BETAS",
@@ -255,6 +264,7 @@ mod tests {
             ))),
             Rc::new(Geom::Xyz(Vec::new())),
             0,
+            &TEST_TMPL,
         )
     }
 
@@ -268,7 +278,7 @@ mod tests {
         tm.write_input(Procedure::SinglePt);
         let got = fs::read_to_string("/tmp/test.mop").expect("file not found");
         let want = format!(
-            "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 charge=0
+            "scfcrt=1.D-21 aux(precision=14) PM6 A0 charge=0 1SCF XYZ
 Comment line 1
 Comment line 2
 
@@ -285,8 +295,8 @@ Comment line 2
         tm.write_input(Procedure::SinglePt);
         let got = fs::read_to_string("/tmp/test.mop").expect("file not found");
         let want = format!(
-            "XYZ 1SCF A0 scfcrt=1.D-21 aux(precision=14) PM6 charge=0 \
-	     external={}
+            "scfcrt=1.D-21 aux(precision=14) PM6 A0 charge=0 1SCF \
+	     external={} XYZ
 Comment line 1
 Comment line 2
 
@@ -334,6 +344,7 @@ HSP            C      0.717322000000
             None,
             Rc::new(Geom::Xyz(Vec::new())),
             0,
+            &TEST_TMPL,
         );
         let got = mp.read_output().unwrap().energy;
         let want = 0.97127947459164715838e+02 / KCALHT;
@@ -345,6 +356,7 @@ HSP            C      0.717322000000
             None,
             Rc::new(Geom::Xyz(Vec::new())),
             1,
+            &TEST_TMPL,
         );
         let got = mp.read_output().unwrap().cart_geom;
         let want = vec![
@@ -382,6 +394,7 @@ HSP            C      0.717322000000
             None,
             Rc::new(Geom::Xyz(Vec::new())),
             0,
+            &TEST_TMPL,
         );
         let got = mp.read_output();
         assert_eq!(got.err().unwrap(), ProgramStatus::EnergyNotFound);
@@ -392,6 +405,7 @@ HSP            C      0.717322000000
             None,
             Rc::new(Geom::Xyz(Vec::new())),
             0,
+            &TEST_TMPL,
         );
         let got = mp.read_output();
         assert_eq!(got.err().unwrap(), ProgramStatus::FileNotFound);

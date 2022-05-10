@@ -22,10 +22,24 @@ pub enum Procedure {
     SinglePt,
 }
 
+#[derive(Debug)]
+pub struct Template<'a> {
+    header: &'a str,
+}
+
+impl Template<'static> {
+    pub const fn from(s: &'static str) -> Self {
+        Self { header: s }
+    }
+}
+
 pub trait Program {
     fn filename(&self) -> String;
 
     fn set_filename(&mut self, filename: &str);
+
+    /// the template for writing input files
+    fn template(&self) -> &Template;
 
     fn extension(&self) -> String;
 
