@@ -1,3 +1,8 @@
+use std::{
+    io::{self, ErrorKind},
+    str::FromStr,
+};
+
 #[derive(Debug, Clone)]
 pub struct Atom {
     pub label: String,
@@ -10,6 +15,34 @@ impl Atom {
             label: label.to_string(),
             coord,
         }
+    }
+}
+
+impl FromStr for Atom {
+    type Err = io::Error;
+
+    /// parse an Atom from a line like
+    ///  C 1.0 1.0 1.0
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let fields: Vec<_> = s.split_whitespace().collect();
+        if fields.len() != 4 {
+            return Err(io::Error::new(
+                ErrorKind::Other,
+                "wrong number of fields in Atom",
+            ));
+        }
+        let coord = fields[1..].iter().map(|s| s.parse());
+        if coord.clone().any(|s| s.is_err()) {
+            return Err(io::Error::new(
+                ErrorKind::Other,
+                "failed to parse coordinate field as f64",
+            ));
+        }
+        let coord: Vec<_> = coord.flatten().collect();
+        Ok(Self {
+            label: fields[0].to_string(),
+            coord: vec![coord[0], coord[1], coord[2]],
+        })
     }
 }
 
