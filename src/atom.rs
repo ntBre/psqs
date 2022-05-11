@@ -61,6 +61,24 @@ pub enum Geom {
     Zmat(String),
 }
 
+impl std::fmt::Display for Geom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Geom::Xyz(atoms) => {
+                for atom in atoms {
+                    writeln!(
+                        f,
+                        "{:5}{:15.10}{:15.10}{:15.10}",
+                        atom.label, atom.coord[0], atom.coord[1], atom.coord[2],
+                    )?
+                }
+            }
+            Geom::Zmat(_) => todo!(),
+        }
+        Ok(())
+    }
+}
+
 impl Geom {
     pub fn xyz(&self) -> Option<&Vec<Atom>> {
         match &self {
