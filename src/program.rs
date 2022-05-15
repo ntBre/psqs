@@ -1,4 +1,4 @@
-use crate::atom::Atom;
+use symm::Atom;
 
 pub mod mopac;
 

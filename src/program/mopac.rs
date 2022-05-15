@@ -1,5 +1,6 @@
-use crate::atom::{geom_string, Atom, Geom};
+use crate::geom::{geom_string, Geom};
 use crate::program::{Program, ProgramStatus};
+use symm::Atom;
 
 use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
@@ -229,7 +230,9 @@ impl Mopac {
             }
         }
         for (c, coord) in coords.iter().enumerate() {
-            res.cart_geom.push(Atom::new(&labels[c], coord.to_vec()));
+            res.cart_geom.push(Atom::new_from_label(
+                &labels[c], coord[0], coord[1], coord[2],
+            ));
         }
         if ok {
             Ok(res)
@@ -376,45 +379,35 @@ HSP            C      0.717322000000
         );
         let got = mp.read_output().unwrap().cart_geom;
         let want = vec![
-            Atom::new(
+            Atom::new_from_label(
                 "C",
-                vec![
-                    0.000000000000000000,
-                    0.000000000000000000,
-                    0.000000000000000000,
-                ],
+                0.000000000000000000,
+                0.000000000000000000,
+                0.000000000000000000,
             ),
-            Atom::new(
+            Atom::new_from_label(
                 "C",
-                vec![
-                    1.436199643883821153,
-                    0.000000000000000000,
-                    0.000000000000000000,
-                ],
+                1.436199643883821153,
+                0.000000000000000000,
+                0.000000000000000000,
             ),
-            Atom::new(
+            Atom::new_from_label(
                 "C",
-                vec![
-                    0.799331622330450298,
-                    1.193205084901411750,
-                    0.000000000000000000,
-                ],
+                0.799331622330450298,
+                1.193205084901411750,
+                0.000000000000000000,
             ),
-            Atom::new(
+            Atom::new_from_label(
                 "H",
-                vec![
-                    2.360710453618393156,
-                    -0.506038360297709655,
-                    0.000000000000026804,
-                ],
+                2.360710453618393156,
+                -0.506038360297709655,
+                0.000000000000026804,
             ),
-            Atom::new(
+            Atom::new_from_label(
                 "H",
-                vec![
-                    0.893457241509136857,
-                    2.242936206295408574,
-                    -0.000000000000026804,
-                ],
+                0.893457241509136857,
+                2.242936206295408574,
+                -0.000000000000026804,
             ),
         ];
         assert_eq!(got, want);

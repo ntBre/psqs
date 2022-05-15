@@ -6,11 +6,11 @@ use std::{
     str, thread,
 };
 
+use crate::{dump::Dump, program::Job};
 use crate::{
-    atom::Geom,
+    geom::Geom,
     program::{Procedure, Program, ProgramStatus},
 };
-use crate::{dump::Dump, program::Job};
 
 pub mod local;
 pub mod slurm;
