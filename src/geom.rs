@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use symm::atom::Atom;
 
 #[derive(Debug)]
@@ -6,7 +8,7 @@ pub enum Geom {
     Zmat(String),
 }
 
-impl std::fmt::Display for Geom {
+impl Display for Geom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Geom::Xyz(atoms) => {
@@ -24,6 +26,12 @@ impl std::fmt::Display for Geom {
             Geom::Zmat(_) => todo!(),
         }
         Ok(())
+    }
+}
+
+impl From<symm::Molecule> for Geom {
+    fn from(mol: symm::Molecule) -> Self {
+        Geom::Xyz(mol.atoms)
     }
 }
 
