@@ -2,7 +2,7 @@ use std::{fmt::Display, str::FromStr};
 
 use symm::atom::Atom;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Geom {
     Xyz(Vec<Atom>),
     Zmat(String),
