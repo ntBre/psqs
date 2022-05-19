@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use nalgebra as na;
 
 #[derive(Debug, Clone)]
@@ -15,6 +17,80 @@ impl Default for Params {
             values: na::DVector::from(vec![0.; 0]),
         }
     }
+}
+
+impl FromStr for Params {
+    type Err = std::string::ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut names = Vec::new();
+        let mut atoms = Vec::new();
+        let mut values = Vec::new();
+        for line in s.lines() {
+            if !line.is_empty() {
+                let fields: Vec<_> = line.split_whitespace().collect();
+                names.push(fields[0].to_string());
+                atoms.push(fields[1].to_string());
+                values.push(fields[2].parse().unwrap());
+            }
+        }
+        Ok(Self {
+            names,
+            atoms,
+            values: na::DVector::from(values),
+        })
+    }
+}
+
+#[test]
+fn test_from_str() {
+    let got: Params = "USS            H    -11.246958000000
+ZS             H      1.268641000000
+BETAS          H     -8.352984000000
+GSS            H     14.448686000000
+USS            C    -51.089653000000
+UPP            C    -39.937920000000
+ZS             C      2.047558000000
+ZP             C      1.702841000000
+BETAS          C    -15.385236000000
+BETAP          C     -7.471929000000
+GSS            C     13.335519000000
+GPP            C     10.778326000000
+GSP            C     11.528134000000
+GP2            C      9.486212000000
+HSP            C      0.717322000000
+FN11           C      0.046302000000"
+        .parse()
+        .unwrap();
+    let want = Params::from_literal(
+        vec![
+            "USS", "ZS", "BETAS", "GSS", "USS", "UPP", "ZS", "ZP", "BETAS",
+            "BETAP", "GSS", "GPP", "GSP", "GP2", "HSP", "FN11",
+        ],
+        vec![
+            "H", "H", "H", "H", "C", "C", "C", "C", "C", "C", "C", "C", "C",
+            "C", "C", "C",
+        ],
+        vec![
+            -11.246958000000,
+            1.268641000000,
+            -8.352984000000,
+            14.448686000000,
+            -51.089653000000,
+            -39.937920000000,
+            2.047558000000,
+            1.702841000000,
+            -15.385236000000,
+            -7.471929000000,
+            13.335519000000,
+            10.778326000000,
+            11.528134000000,
+            9.486212000000,
+            0.717322000000,
+            0.046302000000,
+        ],
+    );
+    assert_eq!(got, want);
 }
 
 impl ToString for Params {
@@ -35,6 +111,15 @@ impl ToString for Params {
 
 impl PartialEq for Params {
     fn eq(&self, other: &Self) -> bool {
+        if self.names.len() != other.names.len() {
+            return false;
+        }
+        if self.atoms.len() != other.atoms.len() {
+            return false;
+        }
+        if self.values.len() != other.values.len() {
+            return false;
+        }
         for (i, n) in self.names.iter().enumerate() {
             if *n != other.names[i] {
                 #[cfg(test)]
