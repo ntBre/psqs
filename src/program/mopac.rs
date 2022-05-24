@@ -171,7 +171,7 @@ impl Mopac {
     pub fn build_jobs(
         moles: &Vec<Rc<Geom>>,
         params: Option<&Params>,
-	dir: &'static str,
+        dir: &'static str,
         start_index: usize,
         coeff: f64,
         job_num: usize,

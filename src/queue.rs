@@ -1,12 +1,11 @@
-use core::time;
 use std::{
     collections::{HashMap, HashSet},
     path::Path,
     process::Command,
-    str, thread,
+    str,
 };
 
-use crate::{dump::Dump, program::Job};
+use crate::program::Job;
 use crate::{
     geom::Geom,
     program::{Procedure, Program, ProgramStatus},
@@ -14,6 +13,8 @@ use crate::{
 
 pub mod local;
 pub mod slurm;
+use drain::*;
+mod drain;
 
 static DEBUG: bool = false;
 
@@ -156,123 +157,13 @@ where
         }
     }
 
-    /// optimize is a stripped-down version of `drain` that runs a single job
-    /// and returns the optimized geometry
-    fn optimize(&self, job: Job<P>) -> Geom {
-        let mut slurm_jobs = HashMap::new();
-        let mut qstat = HashSet::<String>::new();
-        let mut jobs = [job];
-        self.build_chunk(&mut jobs, 0, &mut slurm_jobs, Procedure::Opt);
-        qstat.insert(jobs[0].job_id.clone());
-        loop {
-            match jobs[0].program.read_output() {
-                Ok(res) => return Geom::Xyz(res.cart_geom),
-                Err(e) => self.drain_err_case(
-                    e,
-                    &mut qstat,
-                    &mut slurm_jobs,
-                    &mut jobs[0],
-                ),
-            }
-            // only reached if unsuccessful so sleep
-            qstat = self.status();
-            thread::sleep(time::Duration::from_secs(self.sleep_int() as u64));
-        }
+    /// optimize is a copy of drain for optimizing jobs. TODO combine them by
+    /// abstracting the common aspects
+    fn optimize(&self, jobs: &mut [Job<P>], dst: &mut [Geom]) {
+        Opt.drain(self, jobs, dst);
     }
 
     fn drain(&self, jobs: &mut [Job<P>], dst: &mut [f64]) {
-        let mut chunk_num: usize = 0;
-        let mut cur_jobs = Vec::new();
-        let mut slurm_jobs = HashMap::new();
-        let mut remaining = jobs.len();
-        let mut dump = Dump::new(self.chunk_size() * 5);
-        let mut qstat = HashSet::<String>::new();
-        let mut chunks = jobs.chunks_mut(self.chunk_size());
-        let mut out_of_jobs = false;
-        loop {
-            // build more jobs if there is room
-            while cur_jobs.len() < self.job_limit() {
-                match chunks.next() {
-                    Some(jobs) => {
-                        self.build_chunk(
-                            jobs,
-                            chunk_num,
-                            &mut slurm_jobs,
-                            Procedure::SinglePt,
-                        );
-                        let job_id = jobs[0].job_id.clone();
-                        qstat.insert(job_id);
-                        if DEBUG {
-                            eprintln!("submitted chunk {}", chunk_num);
-                        }
-                        chunk_num += 1;
-                        cur_jobs.extend(jobs);
-                    }
-                    None => {
-                        out_of_jobs = true;
-                        break;
-                    }
-                }
-            }
-            // collect output
-            let mut finished = 0;
-            let mut to_remove = Vec::new();
-            for (i, job) in cur_jobs.iter_mut().enumerate() {
-                match job.program.read_output() {
-                    Ok(res) => {
-                        to_remove.push(i);
-                        dst[job.index] += job.coeff * res.energy;
-                        dump.add(job.program.associated_files());
-                        finished += 1;
-                        remaining -= 1;
-                        let job_name = job.pbs_file.as_str();
-                        let mut count = match slurm_jobs.get_mut(job_name) {
-                            Some(n) => *n,
-                            None => {
-                                eprintln!(
-                                    "failed to find {} in slurm_jobs",
-                                    job_name
-                                );
-                                1
-                            }
-                        };
-                        count -= 1;
-                        if count == 0 {
-                            // delete the submit script
-                            dump.add(vec![
-                                job_name.to_string(),
-                                format!("{}.out", job_name),
-                            ]);
-                        }
-                    }
-                    Err(e) => {
-                        self.drain_err_case(
-                            e,
-                            &mut qstat,
-                            &mut slurm_jobs,
-                            job,
-                        );
-                    }
-                }
-            }
-            // have to remove the highest index first so sort and reverse
-            to_remove.sort();
-            to_remove.reverse();
-            for i in to_remove {
-                cur_jobs.swap_remove(i);
-            }
-            if cur_jobs.len() == 0 && out_of_jobs {
-                return;
-            }
-            if finished == 0 {
-                eprintln!("{} jobs remaining", remaining);
-                qstat = self.status();
-                thread::sleep(time::Duration::from_secs(
-                    self.sleep_int() as u64
-                ));
-            } else if finished > remaining / 10 {
-                eprintln!("{} jobs remaining", remaining);
-            }
-        }
+        Single.drain(self, jobs, dst);
     }
 }
