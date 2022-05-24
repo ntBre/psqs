@@ -151,7 +151,7 @@ impl Drain for Single {
     type Item = f64;
 
     fn procedure(&self) -> Procedure {
-        todo!()
+        Procedure::SinglePt
     }
 
     fn set_result<P: Program>(
