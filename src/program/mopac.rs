@@ -229,16 +229,27 @@ impl Mopac {
             energy: 0.0,
             cart_geom: Vec::new(),
         };
+        lazy_static! {
+            static ref HEAT: Regex = Regex::new("HEAT_OF_FORMATION").unwrap();
+            static ref ATOM: Regex = Regex::new("ATOM_X_OPT").unwrap();
+            static ref ELEMENT: Regex = Regex::new("ATOM_EL").unwrap();
+            static ref CHARGE: Regex = Regex::new("ATOM_CHARGES").unwrap();
+        }
         let mut ok = false;
-        let mut in_geom = false;
-        let mut in_labels = false;
+        #[derive(PartialEq)]
+        enum State {
+            Geom,
+            Labels,
+            None,
+        }
+        let mut state = State::None;
         // atomic labels
         let mut labels = Vec::new();
         // coordinates
         let mut coords: Vec<Vec<f64>> = Vec::new();
         for line in lines {
             // line like HEAT_OF_FORMATION:KCAL/MOL=+0.97127947459164715838D+02
-            if line.contains("HEAT_OF_FORMATION") {
+            if HEAT.is_match(&line) {
                 let fields: Vec<&str> = line.trim().split("=").collect();
                 match fields[1].replace("D", "E").parse::<f64>() {
                     Ok(f) => {
@@ -249,25 +260,25 @@ impl Mopac {
                         return Err(ProgramStatus::EnergyParseError);
                     }
                 }
-            } else if line.contains("ATOM_X_OPT") {
-                in_geom = true;
-            } else if in_geom && line.contains("ATOM_CHARGES") {
-                in_geom = false;
-            } else if in_geom {
+            } else if ATOM.is_match(&line) {
+                state = State::Geom;
+            } else if state == State::Geom && CHARGE.is_match(&line) {
+                state = State::None;
+            } else if state == State::Geom {
                 coords.push(
                     line.split_whitespace()
                         .map(|s| s.parse().unwrap())
                         .collect(),
                 );
                 ok = true;
-            } else if line.contains("ATOM_EL") {
-                in_labels = true;
-            } else if in_labels {
+            } else if ELEMENT.is_match(&line) {
+                state = State::Labels;
+            } else if state == State::Labels {
                 labels = line
                     .split_whitespace()
                     .map(str::to_string)
                     .collect::<Vec<_>>();
-                in_labels = false;
+                state = State::None;
             }
         }
         for (c, coord) in coords.iter().enumerate() {
