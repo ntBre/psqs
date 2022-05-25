@@ -1,9 +1,11 @@
 use crate::geom::{geom_string, Geom};
 use crate::program::{Program, ProgramStatus};
+use lazy_static::lazy_static;
+use regex::Regex;
 use symm::Atom;
 
 use std::collections::hash_map::DefaultHasher;
-use std::fs::File;
+use std::fs::{read_to_string, File};
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Write};
 use std::rc::Rc;
@@ -105,28 +107,24 @@ Comment line 2
     /// occurs (file not found, not written to yet, etc) None is returned.
     fn read_output(&self) -> Result<ProgramResult, ProgramStatus> {
         let outfile = format!("{}.out", &self.filename);
-        let f = match File::open(&outfile) {
-            Ok(file) => file,
+        let contents = match read_to_string(outfile) {
+            Ok(s) => s,
             Err(_) => {
                 return Err(ProgramStatus::FileNotFound);
             } // file not found
         };
-        let mut f = BufReader::new(f);
-        let mut line = String::new();
-        while let Ok(b) = f.read_line(&mut line) {
-            if b == 0 {
-                break;
-            }
-            line.make_ascii_uppercase();
-            if let Some(_) = line.find("PANIC") {
-                eprintln!("panic requested in read_output");
-                std::process::exit(1)
-            } else if let Some(_) = line.find("ERROR") {
-                return Err(ProgramStatus::ErrorInOutput);
-            } else if let Some(_) = line.find(" == MOPAC DONE ==") {
-                return self.read_aux();
-            }
-            line.clear();
+        lazy_static! {
+            static ref PANIC: Regex = Regex::new("(?i)panic").unwrap();
+            static ref ERROR: Regex = Regex::new("(?i)error").unwrap();
+            static ref DONE: Regex = Regex::new(" == MOPAC DONE ==").unwrap();
+        }
+        if PANIC.is_match(&contents) {
+            eprintln!("panic requested in read_output");
+            std::process::exit(1)
+        } else if ERROR.is_match(&contents) {
+            return Err(ProgramStatus::ErrorInOutput);
+        } else if DONE.is_match(&contents) {
+            return self.read_aux();
         }
         Err(ProgramStatus::EnergyNotFound)
     }
