@@ -8,6 +8,12 @@ pub enum Geom {
     Zmat(String),
 }
 
+impl Default for Geom {
+    fn default() -> Self {
+        Self::Xyz(Default::default())
+    }
+}
+
 impl Display for Geom {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
