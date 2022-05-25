@@ -1,3 +1,5 @@
+#![feature(test)]
+
 pub mod geom;
 pub mod program;
 pub mod queue;

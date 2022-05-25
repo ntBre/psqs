@@ -407,6 +407,21 @@ HSP            C      0.717322000000
         fs::remove_file("/tmp/params.dat").unwrap();
     }
 
+    extern crate test;
+    use test::Bencher;
+    #[bench]
+    fn bench_read_output(b: &mut Bencher) {
+        // success
+        let mp = Mopac::new(
+            String::from("testfiles/job"),
+            None,
+            Rc::new(Geom::Xyz(Vec::new())),
+            0,
+            &TEST_TMPL,
+        );
+        b.iter(|| mp.read_output());
+    }
+
     #[test]
     fn test_read_output() {
         // success
