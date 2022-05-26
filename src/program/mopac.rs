@@ -275,7 +275,7 @@ impl Mopac {
                 state = State::Geom;
                 guard.atom = true;
             } else if state == State::Geom && CHARGE.is_match(&line) {
-                state = State::None;
+                break;
             } else if state == State::Geom {
                 coords.push(
                     line.split_whitespace()
