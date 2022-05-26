@@ -10,3 +10,6 @@ nalgebra = "0.30.1"
 symm = { path = "/home/brent/Projects/symm" }
 regex = "1"
 lazy_static = "1.4.0"
+
+[[bin]]
+name = "read_out"

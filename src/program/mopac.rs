@@ -242,14 +242,24 @@ impl Mopac {
             Labels,
             None,
         }
+        struct Guard {
+            heat: bool,
+            atom: bool,
+            element: bool,
+        }
         let mut state = State::None;
+        let mut guard = Guard {
+            heat: false,
+            atom: false,
+            element: false,
+        };
         // atomic labels
         let mut labels = Vec::new();
         // coordinates
         let mut coords: Vec<Vec<f64>> = Vec::new();
         for line in lines {
             // line like HEAT_OF_FORMATION:KCAL/MOL=+0.97127947459164715838D+02
-            if HEAT.is_match(&line) {
+            if !guard.heat && HEAT.is_match(&line) {
                 let fields: Vec<&str> = line.trim().split("=").collect();
                 match fields[1].replace("D", "E").parse::<f64>() {
                     Ok(f) => {
@@ -260,8 +270,10 @@ impl Mopac {
                         return Err(ProgramStatus::EnergyParseError);
                     }
                 }
-            } else if ATOM.is_match(&line) {
+                guard.heat = true;
+            } else if !guard.atom && ATOM.is_match(&line) {
                 state = State::Geom;
+                guard.atom = true;
             } else if state == State::Geom && CHARGE.is_match(&line) {
                 state = State::None;
             } else if state == State::Geom {
@@ -271,8 +283,9 @@ impl Mopac {
                         .collect(),
                 );
                 ok = true;
-            } else if ELEMENT.is_match(&line) {
+            } else if !guard.element && ELEMENT.is_match(&line) {
                 state = State::Labels;
+                guard.element = true;
             } else if state == State::Labels {
                 labels = line
                     .split_whitespace()
