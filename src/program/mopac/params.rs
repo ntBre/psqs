@@ -98,12 +98,8 @@ impl ToString for Params {
         use std::fmt::Write;
         let mut ret = String::new();
         for (i, n) in self.names.iter().enumerate() {
-            writeln!(
-                ret,
-                "{:<8}{:>8}{:20.12}",
-                n, self.atoms[i], self.values[i]
-            )
-            .unwrap();
+            writeln!(ret, "{} {} {:.12}", n, self.atoms[i], self.values[i])
+                .unwrap();
         }
         ret
     }
