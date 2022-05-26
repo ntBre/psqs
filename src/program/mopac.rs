@@ -60,11 +60,12 @@ impl Program for Mopac {
     /// input file with external=paramfile. Also update self.paramfile to point
     /// to the generated name for the parameter file
     fn write_input(&mut self, proc: Procedure) {
+        use std::fmt::Write;
         // header should look like
         //   scfcrt=1.D-21 aux(precision=14) PM6
         // so that the charge, and optionally XYZ, A0, and 1SCF can be added
         let mut header = String::from(self.template().header);
-        header.push_str(&format!(" charge={}", self.charge));
+        write!(header, " charge={}", self.charge).unwrap();
         match proc {
             Procedure::Opt => {
                 // optimization is the default, so just don't add 1SCF
@@ -79,7 +80,7 @@ impl Program for Mopac {
             self.filename.hash(&mut s);
             self.param_file = format!("{}/{}", self.param_dir, s.finish());
             Self::write_params(params, &self.param_file);
-            header.push_str(&format!(" external={}", self.param_file));
+            write!(header, " external={}", self.param_file).unwrap();
         }
         if self.geom.is_xyz() {
             header.push_str(" XYZ");
