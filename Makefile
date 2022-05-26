@@ -12,3 +12,6 @@ profile = RUSTFLAGS='-g' cargo build --release --bin $(1); \
 
 profile.read_out:
 	$(call profile,read_out)
+
+profile.write_in:
+	$(call profile,write_in)

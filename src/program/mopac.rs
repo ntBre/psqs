@@ -352,6 +352,13 @@ mod tests {
         )
     }
 
+    #[bench]
+    fn bench_write_input(b: &mut Bencher) {
+        let mut tm = test_mopac();
+        tm.param_dir = "/tmp".to_string();
+        b.iter(|| tm.write_input(Procedure::SinglePt));
+    }
+
     #[test]
     fn test_write_input() {
         let mut tm = Mopac {

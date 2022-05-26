@@ -95,15 +95,15 @@ FN11           C      0.046302000000"
 
 impl ToString for Params {
     fn to_string(&self) -> String {
+        use std::fmt::Write;
         let mut ret = String::new();
         for (i, n) in self.names.iter().enumerate() {
-            ret.push_str(
-                &format!(
-                    "{:<8}{:>8}{:20.12}\n",
-                    n, self.atoms[i], self.values[i]
-                )
-                .to_string(),
-            );
+            writeln!(
+                ret,
+                "{:<8}{:>8}{:20.12}",
+                n, self.atoms[i], self.values[i]
+            )
+            .unwrap();
         }
         ret
     }
