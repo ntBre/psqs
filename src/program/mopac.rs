@@ -13,7 +13,7 @@ use std::rc::Rc;
 use super::{Job, Procedure, ProgramResult, Template};
 
 /// kcal/mol per hartree
-const KCALHT: f64 = 627.5091809;
+pub const KCALHT: f64 = 627.5091809;
 
 pub use self::params::*;
 pub mod params;
