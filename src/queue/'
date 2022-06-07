@@ -22,10 +22,7 @@ impl Default for LocalQueue {
 
 impl LocalQueue {
     pub fn new(dir: &str, chunk_size: usize) -> Self {
-        Self {
-            dir: dir.to_string(),
-            chunk_size,
-        }
+        Self { dir.to_string(), chunk_size }
     }
 }
 
