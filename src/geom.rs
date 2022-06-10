@@ -29,7 +29,7 @@ impl Display for Geom {
                     )?
                 }
             }
-            Geom::Zmat(_) => todo!(),
+            Geom::Zmat(g) => write!(f, "{}", g)?,
         }
         Ok(())
     }
