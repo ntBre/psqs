@@ -36,7 +36,7 @@ pub struct Mopac {
     pub param_file: String,
     pub param_dir: String,
     pub charge: isize,
-    pub template: &'static Template<'static>,
+    pub template: Template,
 }
 
 impl Program for Mopac {
@@ -49,7 +49,7 @@ impl Program for Mopac {
     }
 
     fn template(&self) -> &Template {
-        self.template
+        &self.template
     }
 
     fn extension(&self) -> String {
@@ -64,7 +64,7 @@ impl Program for Mopac {
         // header should look like
         //   scfcrt=1.D-21 aux(precision=14) PM6
         // so that the charge, and optionally XYZ, A0, and 1SCF can be added
-        let mut header = String::from(self.template().header);
+        let mut header = String::from(self.template().clone().header);
         write!(header, " charge={}", self.charge).unwrap();
         match proc {
             Procedure::Opt => {
@@ -152,7 +152,7 @@ impl Mopac {
         params: Option<Rc<Params>>,
         geom: Rc<Geom>,
         charge: isize,
-        template: &'static Template,
+        template: Template,
     ) -> Self {
         Self {
             filename,
@@ -175,7 +175,7 @@ impl Mopac {
         coeff: f64,
         job_num: usize,
         charge: isize,
-        tmpl: &'static Template,
+        tmpl: Template,
     ) -> Vec<Job<Mopac>> {
         let mut count: usize = start_index;
         let mut job_num = job_num;
@@ -194,7 +194,7 @@ impl Mopac {
                     params.clone(),
                     mol.clone(),
                     charge,
-                    &tmpl,
+                    tmpl.clone(),
                 ),
                 count,
             );
@@ -319,10 +319,6 @@ mod tests {
 
     use super::*;
 
-    static TEST_TMPL: Template = Template {
-        header: "scfcrt=1.D-21 aux(precision=14) PM6 A0",
-    };
-
     fn test_mopac() -> Mopac {
         let names = vec![
             "USS", "ZS", "BETAS", "GSS", "USS", "UPP", "ZS", "ZP", "BETAS",
@@ -349,7 +345,7 @@ mod tests {
             ))),
             Rc::new(Geom::Xyz(Vec::new())),
             0,
-            &TEST_TMPL,
+            Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
         )
     }
 
@@ -438,7 +434,7 @@ HSP C 0.717322000000
             None,
             Rc::new(Geom::Xyz(Vec::new())),
             0,
-            &TEST_TMPL,
+            Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
         );
         b.iter(|| mp.read_output());
     }
@@ -451,7 +447,7 @@ HSP C 0.717322000000
             None,
             Rc::new(Geom::Xyz(Vec::new())),
             0,
-            &TEST_TMPL,
+            Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
         );
         let got = mp.read_output().unwrap().energy;
         let want = 0.97127947459164715838e+02 / KCALHT;
@@ -463,7 +459,7 @@ HSP C 0.717322000000
             None,
             Rc::new(Geom::Xyz(Vec::new())),
             1,
-            &TEST_TMPL,
+            Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
         );
         let got = mp.read_output().unwrap().cart_geom;
         let want = vec![
@@ -506,7 +502,7 @@ HSP C 0.717322000000
             None,
             Rc::new(Geom::Xyz(Vec::new())),
             0,
-            &TEST_TMPL,
+            Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
         );
         let got = mp.read_output();
         assert_eq!(got.err().unwrap(), ProgramStatus::EnergyNotFound);
@@ -517,7 +513,7 @@ HSP C 0.717322000000
             None,
             Rc::new(Geom::Xyz(Vec::new())),
             0,
-            &TEST_TMPL,
+            Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
         );
         let got = mp.read_output();
         assert_eq!(got.err().unwrap(), ProgramStatus::FileNotFound);

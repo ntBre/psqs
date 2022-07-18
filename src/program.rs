@@ -24,14 +24,16 @@ pub enum Procedure {
     SinglePt,
 }
 
-#[derive(Debug)]
-pub struct Template<'a> {
-    header: &'a str,
+#[derive(Clone, Debug)]
+pub struct Template {
+    header: String,
 }
 
-impl Template<'static> {
-    pub const fn from(s: &'static str) -> Self {
-        Self { header: s }
+impl Template {
+    pub fn from(s: &str) -> Self {
+        Self {
+            header: s.to_string(),
+        }
     }
 }
 

@@ -8,9 +8,6 @@ use psqs::{
     },
 };
 
-static TEST_TMPL: Template =
-    Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0");
-
 fn test_mopac() -> Mopac {
     let names = vec![
         "USS", "ZS", "BETAS", "GSS", "USS", "UPP", "ZS", "ZP", "BETAS",
@@ -37,7 +34,7 @@ fn test_mopac() -> Mopac {
         ))),
         Rc::new(Geom::Xyz(Vec::new())),
         0,
-        &TEST_TMPL,
+        Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
     )
 }
 
