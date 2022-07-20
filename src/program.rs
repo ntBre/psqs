@@ -4,6 +4,7 @@ pub mod mopac;
 
 // TODO these should maybe be Options or even an Enum, but it makes the API
 // pretty painful
+#[derive(Clone, Default)]
 pub struct ProgramResult {
     pub energy: f64,
     pub cart_geom: Vec<Atom>,
