@@ -5,7 +5,7 @@ use std::{
     str,
 };
 
-use crate::program::Job;
+use crate::program::{Job, ProgramResult};
 use crate::{
     geom::Geom,
     program::{Procedure, Program, ProgramStatus},
@@ -165,5 +165,9 @@ where
 
     fn drain(&self, jobs: &mut [Job<P>], dst: &mut [f64]) {
         Single.drain(self, jobs, dst);
+    }
+
+    fn energize(&self, jobs: &mut [Job<P>], dst: &mut [ProgramResult]) {
+        Both.drain(self, jobs, dst);
     }
 }

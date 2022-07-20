@@ -163,3 +163,22 @@ impl Drain for Single {
         dst[job.index] += job.coeff * res.energy;
     }
 }
+
+pub(crate) struct Both;
+
+impl Drain for Both {
+    type Item = ProgramResult;
+
+    fn procedure(&self) -> Procedure {
+        Procedure::Opt
+    }
+
+    fn set_result<P: Program>(
+        &self,
+        dst: &mut [Self::Item],
+        job: &mut Job<P>,
+        res: ProgramResult,
+    ) {
+        dst[job.index] = res;
+    }
+}
