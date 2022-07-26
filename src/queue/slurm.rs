@@ -15,12 +15,17 @@ pub struct Slurm {
 }
 
 impl Slurm {
-    pub fn new(chunk_size: usize, job_limit: usize, sleep_int: usize, dir: &'static str) -> Self {
+    pub fn new(
+        chunk_size: usize,
+        job_limit: usize,
+        sleep_int: usize,
+        dir: &'static str,
+    ) -> Self {
         Self {
             chunk_size,
             job_limit,
             sleep_int,
-	    dir,
+            dir,
         }
     }
 
@@ -29,7 +34,7 @@ impl Slurm {
             chunk_size: 128,
             job_limit: 1600,
             sleep_int: 5,
-	    dir: "inp",
+            dir: "inp",
         }
     }
 }
