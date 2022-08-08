@@ -7,7 +7,7 @@ use std::{
 use crate::{
     dump::Dump,
     geom::Geom,
-    program::{Job, Procedure, Program, ProgramResult},
+    program::{Job, Procedure, Program, ProgramResult, ProgramStatus},
 };
 
 use super::{Queue, DEBUG};
@@ -29,7 +29,7 @@ pub(crate) trait Drain {
         queue: &Q,
         jobs: &mut [Job<P>],
         dst: &mut [Self::Item],
-    ) {
+    ) -> Result<(), ()> {
         let mut chunk_num: usize = 0;
         let mut cur_jobs = Vec::new();
         let mut slurm_jobs = HashMap::new();
@@ -95,6 +95,9 @@ pub(crate) trait Drain {
                         }
                     }
                     Err(e) => {
+                        if e == ProgramStatus::ErrorInOutput {
+                            return Err(());
+                        }
                         queue.drain_err_case(
                             e,
                             &mut qstat,
@@ -111,7 +114,7 @@ pub(crate) trait Drain {
                 cur_jobs.swap_remove(i);
             }
             if cur_jobs.len() == 0 && out_of_jobs {
-                return;
+                return Ok(());
             }
             if finished == 0 {
                 eprintln!("{} jobs remaining", remaining);

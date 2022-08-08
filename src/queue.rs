@@ -159,15 +159,23 @@ where
 
     /// optimize is a copy of drain for optimizing jobs. TODO combine them by
     /// abstracting the common aspects
-    fn optimize(&self, jobs: &mut [Job<P>], dst: &mut [Geom]) {
-        Opt.drain(self, jobs, dst);
+    fn optimize(
+        &self,
+        jobs: &mut [Job<P>],
+        dst: &mut [Geom],
+    ) -> Result<(), ()> {
+        Opt.drain(self, jobs, dst)
     }
 
-    fn drain(&self, jobs: &mut [Job<P>], dst: &mut [f64]) {
-        Single.drain(self, jobs, dst);
+    fn drain(&self, jobs: &mut [Job<P>], dst: &mut [f64]) -> Result<(), ()> {
+        Single.drain(self, jobs, dst)
     }
 
-    fn energize(&self, jobs: &mut [Job<P>], dst: &mut [ProgramResult]) {
-        Both.drain(self, jobs, dst);
+    fn energize(
+        &self,
+        jobs: &mut [Job<P>],
+        dst: &mut [ProgramResult],
+    ) -> Result<(), ()> {
+        Both.drain(self, jobs, dst)
     }
 }
