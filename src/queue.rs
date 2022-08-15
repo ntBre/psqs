@@ -89,17 +89,7 @@ where
 
     /// return a HashSet of jobs found in the queue based on the output of
     /// `stat_cmd`
-    fn status(&self) -> HashSet<String> {
-        let mut ret = HashSet::new();
-        let lines = self.stat_cmd();
-        let lines = lines.lines();
-        for line in lines {
-            if !line.contains("JOBID") {
-                ret.insert(line.split_whitespace().next().unwrap().to_string());
-            }
-        }
-        ret
-    }
+    fn status(&self) -> HashSet<String>;
 
     /// Build a chunk of jobs by writing the Program input file and the
     /// corresponding submission script and then submitting the script

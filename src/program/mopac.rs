@@ -310,6 +310,7 @@ impl Mopac {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use std::fs::{self, read_to_string};
 
     use crate::program::Procedure;
@@ -556,6 +557,10 @@ HSP C 0.717322000000
         }
 
         fn stat_cmd(&self) -> String {
+            todo!()
+        }
+
+        fn status(&self) -> HashSet<String> {
             todo!()
         }
     }

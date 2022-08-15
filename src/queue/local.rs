@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 
@@ -65,5 +66,9 @@ impl<P: Program + Clone> Queue<P> for LocalQueue {
 
     fn stat_cmd(&self) -> String {
         todo!()
+    }
+
+    fn status(&self) -> HashSet<String> {
+        todo!();
     }
 }

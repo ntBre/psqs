@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 
@@ -101,5 +102,17 @@ export LD_LIBRARY_PATH=/home/qc/mopac2016/\n",
         };
         String::from_utf8(status.stdout)
             .expect("failed to convert squeue output to String")
+    }
+
+    fn status(&self) -> HashSet<String> {
+        let mut ret = HashSet::new();
+        let lines = self.stat_cmd();
+        let lines = lines.lines();
+        for line in lines {
+            if !line.contains("JOBID") {
+                ret.insert(line.split_whitespace().next().unwrap().to_string());
+            }
+        }
+        ret
     }
 }
