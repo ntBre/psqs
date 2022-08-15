@@ -89,6 +89,10 @@ export LD_LIBRARY_PATH=/home/qc/mopac2016/\n",
         &self.dir
     }
 
+    /// run `squeue -u $USER`. form of the output is:
+    ///
+    ///    JOBID PARTITION   NAME     USER ST        TIME  NODES NODELIST(REASON)
+    /// 30627992   compute  c3oh-   mdavis  R 46-17:12:23      1 node2
     fn stat_cmd(&self) -> String {
         let user = std::env::vars()
             .find(|x| x.0 == "USER")
@@ -110,7 +114,12 @@ export LD_LIBRARY_PATH=/home/qc/mopac2016/\n",
         let lines = lines.lines();
         for line in lines {
             if !line.contains("JOBID") {
-                ret.insert(line.split_whitespace().next().unwrap().to_string());
+                let fields: Vec<_> = line.split_whitespace().collect();
+                assert!(fields.len() == 8);
+                // exclude completing jobs to combat stuck completing bug
+                if fields[4] != "CG" {
+                    ret.insert(fields[0].to_string());
+                }
             }
         }
         ret
