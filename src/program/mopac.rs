@@ -429,6 +429,13 @@ HSP C 0.717322000000
         b.iter(|| mp.read_output());
     }
 
+    #[bench]
+    fn bench_write_input(b: &mut Bencher) {
+        let mut tm = test_mopac();
+        tm.param_dir = "/tmp".to_string();
+        b.iter(|| tm.write_input(Procedure::SinglePt));
+    }
+
     #[test]
     fn test_read_output() {
         // success
