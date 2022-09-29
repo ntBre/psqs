@@ -436,6 +436,12 @@ HSP C 0.717322000000
         b.iter(|| tm.write_input(Procedure::SinglePt));
     }
 
+    #[bench]
+    fn bench_geom_string(b: &mut Bencher) {
+        let tm = test_mopac();
+        b.iter(|| test::black_box(geom_string(&tm.geom)));
+    }
+
     #[test]
     fn test_read_output() {
         // success
