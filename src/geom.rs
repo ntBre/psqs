@@ -119,29 +119,23 @@ impl Geom {
     }
 
     pub fn is_xyz(&self) -> bool {
-        match &self {
-            Geom::Xyz(_) => true,
-            _ => false,
-        }
+        matches!(self, Geom::Xyz(_))
     }
     pub fn is_zmat(&self) -> bool {
-        match &self {
-            Geom::Zmat(_) => true,
-            _ => false,
-        }
+        matches!(self, Geom::Zmat(_))
     }
 }
 
 pub fn geom_string(geom: &Geom) -> String {
     use std::fmt::Write;
-    let mut ret = String::new();
     match geom {
         Geom::Xyz(geom) => {
+            let mut ret = String::with_capacity(50 * geom.len());
             for g in geom {
-                write!(ret, "{}\n", g.to_string()).unwrap();
+                writeln!(ret, "{} {} {} {}", g.label(), g.x, g.y, g.z).unwrap();
             }
+            ret
         }
-        Geom::Zmat(geom) => ret.push_str(&geom),
+        Geom::Zmat(geom) => geom.to_string(),
     }
-    ret
 }

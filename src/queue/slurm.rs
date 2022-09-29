@@ -86,7 +86,7 @@ export LD_LIBRARY_PATH=/home/qc/mopac2016/\n",
     const SCRIPT_EXT: &'static str = "slurm";
 
     fn dir(&self) -> &str {
-        &self.dir
+        self.dir
     }
 
     /// run `squeue -u $USER`. form of the output is:

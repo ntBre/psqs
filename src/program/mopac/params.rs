@@ -182,4 +182,9 @@ impl Params {
         assert_eq!(self.names.len(), self.values.len());
         self.names.len()
     }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }

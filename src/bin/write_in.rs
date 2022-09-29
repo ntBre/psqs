@@ -43,6 +43,7 @@ fn main() {
     tm.param_dir = "/tmp".to_string();
     let mut res = Vec::new();
     for _ in 0..1000 {
-        res.push(tm.write_input(Procedure::SinglePt));
+        tm.write_input(Procedure::SinglePt);
+        res.push(());
     }
 }

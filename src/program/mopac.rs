@@ -1,5 +1,5 @@
 use crate::geom::{geom_string, Geom};
-use crate::program::{Program, ProgramStatus};
+use crate::program::{Program, ProgramError};
 use lazy_static::lazy_static;
 use regex::Regex;
 use symm::Atom;
@@ -64,7 +64,7 @@ impl Program for Mopac {
         // header should look like
         //   scfcrt=1.D-21 aux(precision=14) PM6
         // so that the charge, and optionally XYZ, A0, and 1SCF can be added
-        let mut header = String::from(self.template().clone().header);
+        let mut header = self.template().clone().header;
         write!(header, " charge={}", self.charge).unwrap();
         match proc {
             Procedure::Opt => {
@@ -106,12 +106,12 @@ Comment line 2
     /// reading the `.aux` file to extract the energy from there. This function
     /// panics if an error is found in the output file. If a non-fatal error
     /// occurs (file not found, not written to yet, etc) None is returned.
-    fn read_output(&self) -> Result<ProgramResult, ProgramStatus> {
+    fn read_output(&self) -> Result<ProgramResult, ProgramError> {
         let outfile = format!("{}.out", &self.filename);
         let contents = match read_to_string(outfile) {
             Ok(s) => s,
             Err(_) => {
-                return Err(ProgramStatus::FileNotFound);
+                return Err(ProgramError::FileNotFound);
             } // file not found
         };
         lazy_static! {
@@ -123,11 +123,11 @@ Comment line 2
             eprintln!("panic requested in read_output");
             std::process::exit(1)
         } else if ERROR.is_match(&contents) {
-            return Err(ProgramStatus::ErrorInOutput);
+            return Err(ProgramError::ErrorInOutput);
         } else if DONE.is_match(&contents) {
             return self.read_aux();
         }
-        Err(ProgramStatus::EnergyNotFound)
+        Err(ProgramError::EnergyNotFound)
     }
 
     fn associated_files(&self) -> Vec<String> {
@@ -167,6 +167,7 @@ impl Mopac {
 
     /// Build the jobs described by `moles` in memory, but don't write any of their
     /// files yet
+    #[allow(clippy::too_many_arguments)]
     pub fn build_jobs(
         moles: &Vec<Rc<Geom>>,
         params: Option<&Params>,
@@ -180,11 +181,7 @@ impl Mopac {
         let mut count: usize = start_index;
         let mut job_num = job_num;
         let mut jobs = Vec::new();
-        let params = if params.is_some() {
-            Some(Rc::new(params.unwrap().clone()))
-        } else {
-            None
-        };
+        let params = params.map(|p| Rc::new(p.clone()));
         for mol in moles {
             let filename = format!("{dir}/job.{:08}", job_num);
             job_num += 1;
@@ -206,7 +203,7 @@ impl Mopac {
     }
 
     fn write_params(params: &Rc<Params>, filename: &str) {
-        let body = String::from(params.to_string());
+        let body = params.to_string();
         let mut file = match File::create(filename) {
             Ok(f) => f,
             Err(e) => {
@@ -218,12 +215,12 @@ impl Mopac {
     }
 
     /// return the heat of formation from a MOPAC aux file in Hartrees
-    fn read_aux(&self) -> Result<ProgramResult, ProgramStatus> {
+    fn read_aux(&self) -> Result<ProgramResult, ProgramError> {
         let auxfile = format!("{}.aux", &self.filename);
         let f = if let Ok(file) = File::open(&auxfile) {
             file
         } else {
-            return Err(ProgramStatus::FileNotFound);
+            return Err(ProgramError::FileNotFound);
         };
         let lines = BufReader::new(f).lines().flatten();
         let mut res = ProgramResult {
@@ -261,14 +258,14 @@ impl Mopac {
         for line in lines {
             // line like HEAT_OF_FORMATION:KCAL/MOL=+0.97127947459164715838D+02
             if !guard.heat && HEAT.is_match(&line) {
-                let fields: Vec<&str> = line.trim().split("=").collect();
-                match fields[1].replace("D", "E").parse::<f64>() {
+                let fields: Vec<&str> = line.trim().split('=').collect();
+                match fields[1].replace('D', "E").parse::<f64>() {
                     Ok(f) => {
                         res.energy = f / KCALHT;
                         ok = true;
                     }
                     Err(_) => {
-                        return Err(ProgramStatus::EnergyParseError);
+                        return Err(ProgramError::EnergyParseError);
                     }
                 }
                 guard.heat = true;
@@ -303,7 +300,7 @@ impl Mopac {
         if ok {
             Ok(res)
         } else {
-            Err(ProgramStatus::EnergyNotFound)
+            Err(ProgramError::EnergyNotFound)
         }
     }
 }
@@ -350,13 +347,6 @@ mod tests {
         )
     }
 
-    #[bench]
-    fn bench_write_input(b: &mut Bencher) {
-        let mut tm = test_mopac();
-        tm.param_dir = "/tmp".to_string();
-        b.iter(|| tm.write_input(Procedure::SinglePt));
-    }
-
     #[test]
     fn test_write_input() {
         let mut tm = Mopac {
@@ -366,13 +356,12 @@ mod tests {
         tm.param_dir = "/tmp".to_string();
         tm.write_input(Procedure::SinglePt);
         let got = fs::read_to_string("/tmp/test.mop").expect("file not found");
-        let want = format!(
-            "scfcrt=1.D-21 aux(precision=14) PM6 A0 charge=0 1SCF XYZ
+        let want = "scfcrt=1.D-21 aux(precision=14) PM6 A0 charge=0 1SCF XYZ
 Comment line 1
 Comment line 2
 
-",
-        );
+"
+        .to_string();
         assert_eq!(got, want);
         fs::remove_file("/tmp/test.mop").unwrap();
     }
@@ -451,7 +440,7 @@ HSP C 0.717322000000
             Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
         );
         let got = mp.read_output().unwrap().energy;
-        let want = 0.97127947459164715838e+02 / KCALHT;
+        let want = 9.712_794_745_916_472e1 / KCALHT;
         assert!((got - want).abs() < 1e-20);
 
         // opt success
@@ -472,26 +461,26 @@ HSP C 0.717322000000
             ),
             Atom::new_from_label(
                 "C",
-                1.436199643883821153,
+                1.436_199_643_883_821_2,
                 0.000000000000000000,
                 0.000000000000000000,
             ),
             Atom::new_from_label(
                 "C",
-                0.799331622330450298,
-                1.193205084901411750,
+                0.799_331_622_330_450_3,
+                1.193_205_084_901_411_7,
                 0.000000000000000000,
             ),
             Atom::new_from_label(
                 "H",
-                2.360710453618393156,
-                -0.506038360297709655,
+                2.360_710_453_618_393,
+                -0.506_038_360_297_709_7,
                 0.000000000000026804,
             ),
             Atom::new_from_label(
                 "H",
-                0.893457241509136857,
-                2.242936206295408574,
+                0.893_457_241_509_136_9,
+                2.242_936_206_295_408_6,
                 -0.000000000000026804,
             ),
         ];
@@ -506,7 +495,7 @@ HSP C 0.717322000000
             Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
         );
         let got = mp.read_output();
-        assert_eq!(got.err().unwrap(), ProgramStatus::EnergyNotFound);
+        assert_eq!(got.err().unwrap(), ProgramError::EnergyNotFound);
 
         // failure in aux
         let mp = Mopac::new(
@@ -517,7 +506,7 @@ HSP C 0.717322000000
             Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
         );
         let got = mp.read_output();
-        assert_eq!(got.err().unwrap(), ProgramStatus::FileNotFound);
+        assert_eq!(got.err().unwrap(), ProgramError::FileNotFound);
     }
 
     /// minimal queue for testing general submission
@@ -596,8 +585,7 @@ HSP C 0.717322000000
         };
         assert_eq!(got, want);
 
-        for f in vec!["/tmp/job.mop", "/tmp/job_redo.mop", "/tmp/job_redo.pbs"]
-        {
+        for f in ["/tmp/job.mop", "/tmp/job_redo.mop", "/tmp/job_redo.pbs"] {
             std::fs::remove_file(f).unwrap();
         }
     }

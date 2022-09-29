@@ -36,9 +36,10 @@ impl<P: Program + Clone> Queue<P> for LocalQueue {
         for f in infiles {
             body.push_str(&format!("/opt/mopac/mopac {f}.mop\n"));
         }
-        body.push_str(&format!("date +%s\n"));
-        let mut file = File::create(filename)
-            .expect(&format!("failed to create submit script `{filename}`"));
+        body.push_str("date +%s\n");
+        let mut file = File::create(filename).unwrap_or_else(|_| {
+            panic!("failed to create submit script `{filename}`")
+        });
         write!(file, "{}", body).expect("failed to write submit script");
     }
 

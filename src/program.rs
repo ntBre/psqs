@@ -10,15 +10,15 @@ pub struct ProgramResult {
     pub cart_geom: Vec<Atom>,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum ProgramStatus {
+#[derive(Debug, PartialEq, Eq)]
+pub enum ProgramError {
     FileNotFound,
     ErrorInOutput,
     EnergyNotFound,
     EnergyParseError,
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Procedure {
     Opt,
     Freq,
@@ -52,7 +52,7 @@ pub trait Program {
 
     fn write_input(&mut self, proc: Procedure);
 
-    fn read_output(&self) -> Result<ProgramResult, ProgramStatus>;
+    fn read_output(&self) -> Result<ProgramResult, ProgramError>;
 
     /// Return all the filenames associated with the Program for deletion when
     /// it finishes

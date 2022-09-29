@@ -8,7 +8,7 @@ use std::{
 use crate::program::{Job, ProgramResult};
 use crate::{
     geom::Geom,
-    program::{Procedure, Program, ProgramStatus},
+    program::{Procedure, Program, ProgramError},
 };
 
 pub mod local;
@@ -18,7 +18,7 @@ mod drain;
 
 static DEBUG: bool = false;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct Resubmit {
     pub inp_file: String,
     pub pbs_file: String,
@@ -120,7 +120,7 @@ where
 
     fn drain_err_case(
         &self,
-        e: ProgramStatus,
+        e: ProgramError,
         qstat: &mut HashSet<String>,
         slurm_jobs: &mut HashMap<String, usize>,
         job: &mut Job<P>,
@@ -153,11 +153,15 @@ where
         &self,
         jobs: &mut [Job<P>],
         dst: &mut [Geom],
-    ) -> Result<(), ()> {
+    ) -> Result<(), ProgramError> {
         Opt.drain(self, jobs, dst)
     }
 
-    fn drain(&self, jobs: &mut [Job<P>], dst: &mut [f64]) -> Result<(), ()> {
+    fn drain(
+        &self,
+        jobs: &mut [Job<P>],
+        dst: &mut [f64],
+    ) -> Result<(), ProgramError> {
         Single.drain(self, jobs, dst)
     }
 
@@ -165,7 +169,7 @@ where
         &self,
         jobs: &mut [Job<P>],
         dst: &mut [ProgramResult],
-    ) -> Result<(), ()> {
+    ) -> Result<(), ProgramError> {
         Both.drain(self, jobs, dst)
     }
 }
