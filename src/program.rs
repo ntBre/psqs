@@ -1,5 +1,6 @@
 use symm::Atom;
 
+pub mod molpro;
 pub mod mopac;
 
 #[derive(Clone, Debug, Default)]
@@ -36,20 +37,28 @@ impl Template {
     }
 }
 
+/// A trait for describing programs runnable on a [crate::queue::Queue]
 pub trait Program {
+    /// returns the file associated with the program's input. it should not
+    /// include an extension
     fn filename(&self) -> String;
 
+    /// set `filename`
     fn set_filename(&mut self, filename: &str);
 
     /// the template for writing input files
     fn template(&self) -> &Template;
 
+    /// the file extension for the input file
     fn extension(&self) -> String;
 
+    /// molecular charge
     fn charge(&self) -> isize;
 
+    /// write the input file to the name returned by `filename`
     fn write_input(&mut self, proc: Procedure);
 
+    /// read the output file found by replacing `self.extension()` with `.out`
     fn read_output(&self) -> Result<ProgramResult, ProgramError>;
 
     /// Return all the filenames associated with the Program for deletion when
