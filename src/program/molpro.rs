@@ -1,10 +1,11 @@
-use std::fs::File;
+use std::fs::{read_to_string, File};
 
+use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::geom::{geom_string, Geom};
 
-use super::{Procedure, Program, Template};
+use super::{Procedure, Program, ProgramError, ProgramResult, Template};
 
 #[cfg(test)]
 mod tests;
@@ -88,11 +89,12 @@ impl Program for Molpro {
         use std::io::Write;
         let mut body = self.template().clone().header;
         // skip optgrad but accept optg at the end of a line
-        lazy_static::lazy_static! {
-        static ref OPTG: Regex = Regex::new(r"(?i)optg(,|\s*$)").unwrap();
-        static ref OPTG_LINE: Regex = Regex::new(r"(?i)^.*optg(,|\s*$)").unwrap();
-        static ref CHARGE: Regex = Regex::new(r"\{\{.charge\}\}").unwrap();
-        static ref GEOM: Regex = Regex::new(r"\{\{.geom\}\}").unwrap();
+        lazy_static! {
+            static ref OPTG: Regex = Regex::new(r"(?i)optg(,|\s*$)").unwrap();
+            static ref OPTG_LINE: Regex =
+                Regex::new(r"(?i)^.*optg(,|\s*$)").unwrap();
+            static ref CHARGE: Regex = Regex::new(r"\{\{.charge\}\}").unwrap();
+            static ref GEOM: Regex = Regex::new(r"\{\{.geom\}\}").unwrap();
         }
         let mut found_opt = false;
         if OPTG.is_match(&body) {
@@ -150,8 +152,27 @@ impl Program for Molpro {
         write!(file, "{}", body).expect("failed to write input file");
     }
 
-    fn read_output(&self) -> Result<super::ProgramResult, super::ProgramError> {
-        todo!()
+    fn read_output(&self) -> Result<ProgramResult, ProgramError> {
+        let outfile = format!("{}.out", &self.filename);
+        let contents = match read_to_string(outfile) {
+            Ok(s) => s,
+            Err(_) => {
+                return Err(ProgramError::FileNotFound);
+            }
+        };
+        lazy_static! {
+            static ref PANIC: Regex = Regex::new("(?i)panic").unwrap();
+            static ref ERROR: Regex = Regex::new("(?i)error").unwrap();
+        }
+        if PANIC.is_match(&contents) {
+            panic!("panic requested in read_output");
+        } else if ERROR.is_match(&contents) {
+            return Err(ProgramError::ErrorInOutput);
+        }
+
+        for _line in contents.lines() {}
+
+        Err(ProgramError::EnergyNotFound)
     }
 
     fn associated_files(&self) -> Vec<String> {

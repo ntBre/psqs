@@ -1,16 +1,13 @@
-/// in these names, the first word is the template type (opt => optg line
-/// included in template, for example), and the second word is the Procedure
-mod write_input {
-    use std::{fs::read_to_string, str::FromStr};
+use std::{fs::read_to_string, str::FromStr};
 
-    use crate::{
-        geom::Geom,
-        program::{molpro::Molpro, Procedure, Program, Template},
-    };
+use crate::{
+    geom::Geom,
+    program::{molpro::Molpro, Procedure, Program, Template},
+};
 
-    fn opt_templ() -> Template {
-        Template::from(
-            "
+fn opt_templ() -> Template {
+    Template::from(
+        "
 memory,1,g
 
 gthresh,energy=1.d-12,zero=1.d-22,oneint=1.d-22,twoint=1.d-22;
@@ -28,12 +25,12 @@ hf,accuracy=16,energy=1.0d-10
 {CCSD(T)-F12,thrden=1.0d-8,thrvar=1.0d-10}
 {optg,grms=1.d-8,srms=1.d-8}
 ",
-        )
-    }
+    )
+}
 
-    fn single_templ() -> Template {
-        Template::from(
-            "
+fn single_templ() -> Template {
+    Template::from(
+        "
 memory,1,g
 
 gthresh,energy=1.d-12,zero=1.d-22,oneint=1.d-22,twoint=1.d-22;
@@ -50,24 +47,24 @@ set,spin=0
 hf,accuracy=16,energy=1.0d-10
 {CCSD(T)-F12,thrden=1.0d-8,thrvar=1.0d-10}
 ",
-        )
-    }
+    )
+}
 
-    enum Type {
-        Opt,
-        Single,
-    }
+enum Type {
+    Opt,
+    Single,
+}
 
-    fn test_molpro(t: Type) -> Molpro {
-        Molpro::new(
-            "/tmp/opt".to_string(),
-            match t {
-                Type::Opt => opt_templ(),
-                Type::Single => single_templ(),
-            },
-            0,
-            Geom::from_str(
-                "C
+fn test_molpro(t: Type) -> Molpro {
+    Molpro::new(
+        "/tmp/opt".to_string(),
+        match t {
+            Type::Opt => opt_templ(),
+            Type::Single => single_templ(),
+        },
+        0,
+        Geom::from_str(
+            "C
 C 1 CC
 C 1 CC 2 CCC
 H 2 CH 1 HCC 3 180.0
@@ -78,10 +75,15 @@ CCC =                55.60133141
 CH =                  1.07692776
 HCC =               147.81488230
 ",
-            )
-            .unwrap(),
         )
-    }
+        .unwrap(),
+    )
+}
+
+/// in these names, the first word is the template type (opt => optg line
+/// included in template, for example), and the second word is the Procedure
+mod write_input {
+    use super::*;
 
     macro_rules! check {
         ($want_file: expr) => {
@@ -125,5 +127,50 @@ HCC =               147.81488230
         m.write_input(Procedure::SinglePt);
 
         check!("testfiles/molpro/opt_single.want");
+    }
+}
+
+mod read_output {
+    use crate::program::{Program, ProgramResult};
+    use symm::Atom;
+
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn opt() {
+        let m = Molpro {
+            filename: "testfiles/molpro/opt".to_owned(),
+            template: Template::from(""),
+            charge: 0,
+            geom: Geom::Zmat(String::from("")),
+        };
+        let got = m.read_output().unwrap();
+        let want = ProgramResult {
+            energy: -76.369839620286,
+            cart_geom: vec![
+                //
+                Atom::new_from_label(
+                    "O",
+                    0.0000000000,
+                    0.0000000000,
+                    -0.0657441581,
+                ),
+                Atom::new_from_label(
+                    "H",
+                    0.0000000000,
+                    0.7574590773,
+                    0.5217905246,
+                ),
+                Atom::new_from_label(
+                    "H",
+                    0.0000000000,
+                    -0.7574590773,
+                    0.5217905246,
+                ),
+            ],
+        };
+
+        assert_eq!(got, want);
     }
 }

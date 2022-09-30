@@ -125,7 +125,7 @@ Comment line 2
             Ok(s) => s,
             Err(_) => {
                 return Err(ProgramError::FileNotFound);
-            } // file not found
+            }
         };
         lazy_static! {
             static ref PANIC: Regex = Regex::new("(?i)panic").unwrap();
@@ -133,8 +133,7 @@ Comment line 2
             static ref DONE: Regex = Regex::new(" == MOPAC DONE ==").unwrap();
         }
         if PANIC.is_match(&contents) {
-            eprintln!("panic requested in read_output");
-            std::process::exit(1)
+            panic!("panic requested in read_output");
         } else if ERROR.is_match(&contents) {
             return Err(ProgramError::ErrorInOutput);
         } else if DONE.is_match(&contents) {

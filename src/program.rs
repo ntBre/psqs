@@ -3,7 +3,7 @@ use symm::Atom;
 pub mod molpro;
 pub mod mopac;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct ProgramResult {
     pub energy: f64,
     pub cart_geom: Vec<Atom>,
