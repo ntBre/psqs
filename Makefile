@@ -9,6 +9,8 @@ profile = RUSTFLAGS='-g' cargo build --release --bin $(1); \
 	valgrind --tool=callgrind --callgrind-out-file=callgrind.out	\
 		--collect-jumps=yes --simulate-cache=yes		\
 		${BASE}/target/release/$(1)
+doc:
+	cargo doc --no-deps ${ARGS}
 
 profile.read_out:
 	$(call profile,read_out)
