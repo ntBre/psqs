@@ -136,7 +136,7 @@ impl Program for Molpro {
             }
             new_lines
         } else {
-            geom
+            format!("{geom}\n}}\n")
         };
         body = GEOM.replace(&body, geom).to_string();
         body = CHARGE
