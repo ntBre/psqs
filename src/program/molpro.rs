@@ -163,6 +163,10 @@ impl Program for Molpro {
         lazy_static! {
             static ref PANIC: Regex = Regex::new("(?i)panic").unwrap();
             static ref ERROR: Regex = Regex::new("(?i)error").unwrap();
+        // TODO make this able to be passed in
+        static ref ENERGY: Regex = Regex::new("energy= ").unwrap();
+        static ref GEOM: Regex = Regex::new("Current geometry").unwrap();
+        static ref BLANK: Regex = Regex::new(r"^\s*$").unwrap();
         }
         if PANIC.is_match(&contents) {
             panic!("panic requested in read_output");
@@ -170,7 +174,50 @@ impl Program for Molpro {
             return Err(ProgramError::ErrorInOutput);
         }
 
-        for _line in contents.lines() {}
+        let mut energy = None;
+        let mut skip = 0;
+        let mut geom = false;
+        let mut atoms = Vec::new();
+        for line in contents.lines() {
+            if skip > 0 {
+                skip -= 1;
+            } else if ENERGY.is_match(line) {
+                let energy_str = line.split_whitespace().last();
+                if let Some(e) = energy_str {
+                    energy = if let Ok(v) = e.parse::<f64>() {
+                        Some(v)
+                    } else {
+                        return Err(ProgramError::EnergyParseError);
+                    }
+                } else {
+                    return Err(ProgramError::EnergyParseError);
+                }
+            } else if GEOM.is_match(line) {
+                skip = 3;
+                geom = true;
+            } else if geom && BLANK.is_match(line) {
+                geom = false;
+            } else if geom {
+                let sp: Vec<_> = line.split_whitespace().collect();
+                // kinda sad to panic here, but not sure what else to do. could
+                // return a GeomParse error, but then that's irrelevant to a
+                // caller who only wants the energy. maybe we just set geom to
+                // false and reset atoms to be empty
+                atoms.push(symm::Atom::new_from_label(
+                    sp[0],
+                    sp[1].parse().unwrap(),
+                    sp[2].parse().unwrap(),
+                    sp[3].parse().unwrap(),
+                ));
+            }
+        }
+
+        if let Some(energy) = energy {
+            return Ok(ProgramResult {
+                energy,
+                cart_geom: if atoms.is_empty() { None } else { Some(atoms) },
+            });
+        }
 
         Err(ProgramError::EnergyNotFound)
     }

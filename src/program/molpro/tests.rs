@@ -137,7 +137,6 @@ mod read_output {
     use super::*;
 
     #[test]
-    #[ignore]
     fn opt() {
         let m = Molpro {
             filename: "testfiles/molpro/opt".to_owned(),
