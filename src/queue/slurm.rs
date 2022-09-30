@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 
+use crate::program::molpro::Molpro;
 use crate::program::mopac::Mopac;
 use crate::program::Program;
 use crate::queue::Queue;
@@ -40,6 +41,34 @@ impl Slurm {
             sleep_int: 5,
             dir: "inp",
         }
+    }
+}
+
+impl Queue<Molpro> for Slurm {
+    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+        let mut body = format!(
+            "#!/bin/bash
+#SBATCH --job-name={filename}
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH -o {filename}.out
+#SBATCH --no-requeue
+#SBATCH --mem=8gb
+"
+        );
+        for f in infiles {
+            body.push_str(&format!("/home/qc/bin/molpro2020.sh 1 1 {f}.inp\n"));
+        }
+        let mut file = match File::create(filename) {
+            Ok(f) => f,
+            Err(_) => {
+                eprintln!("write_submit_script: failed to create {filename}");
+                std::process::exit(1);
+            }
+        };
+        write!(file, "{}", body).unwrap_or_else(|_| {
+            panic!("failed to write molpro input file: {}", filename)
+        });
     }
 }
 

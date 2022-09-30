@@ -10,6 +10,7 @@ use super::{Procedure, Program, ProgramError, ProgramResult, Template};
 #[cfg(test)]
 mod tests;
 
+#[derive(Clone)]
 pub struct Molpro {
     filename: String,
     template: Template,
