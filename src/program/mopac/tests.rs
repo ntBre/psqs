@@ -25,7 +25,7 @@ fn test_mopac() -> Mopac {
         -7.471929000000, 13.335519000000, 10.778326000000,
         11.528134000000, 9.486212000000, 0.717322000000,
     ];
-    Mopac::new(
+    Mopac::new_full(
         String::from("/tmp/test"),
         Some(Rc::new(Params::from(
             names.iter().map(|s| s.to_string()).collect(),
@@ -106,7 +106,7 @@ use test::Bencher;
 #[bench]
 fn bench_read_output(b: &mut Bencher) {
     // success
-    let mp = Mopac::new(
+    let mp = Mopac::new_full(
         String::from("testfiles/job"),
         None,
         Rc::new(Geom::Xyz(Vec::new())),
@@ -132,7 +132,7 @@ fn bench_geom_string(b: &mut Bencher) {
 #[test]
 fn test_read_output() {
     // success
-    let mp = Mopac::new(
+    let mp = Mopac::new_full(
         String::from("testfiles/job"),
         None,
         Rc::new(Geom::Xyz(Vec::new())),
@@ -144,7 +144,7 @@ fn test_read_output() {
     assert!((got - want).abs() < 1e-20);
 
     // opt success
-    let mp = Mopac::new(
+    let mp = Mopac::new_full(
         String::from("testfiles/opt"),
         None,
         Rc::new(Geom::Xyz(Vec::new())),
@@ -187,7 +187,7 @@ fn test_read_output() {
     assert_eq!(got, Some(want));
 
     // failure in output
-    let mp = Mopac::new(
+    let mp = Mopac::new_full(
         String::from("testfiles/nojob"),
         None,
         Rc::new(Geom::Xyz(Vec::new())),
@@ -198,7 +198,7 @@ fn test_read_output() {
     assert_eq!(got.err().unwrap(), ProgramError::EnergyNotFound);
 
     // failure in aux
-    let mp = Mopac::new(
+    let mp = Mopac::new_full(
         String::from("testfiles/noaux"),
         None,
         Rc::new(Geom::Xyz(Vec::new())),

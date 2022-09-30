@@ -73,6 +73,37 @@ pub trait Program {
         charge: isize,
         geom: Geom,
     ) -> Self;
+
+    /// Build the jobs described by `moles` in memory, but don't write any of
+    /// their files yet
+    fn build_jobs(
+        moles: &Vec<Geom>,
+        dir: &'static str,
+        start_index: usize,
+        coeff: f64,
+        job_num: usize,
+        charge: isize,
+        tmpl: Template,
+    ) -> Vec<Job<Self>>
+    where
+        Self: std::marker::Sized,
+    {
+        let mut count: usize = start_index;
+        let mut job_num = job_num;
+        let mut jobs = Vec::new();
+        for mol in moles {
+            let filename = format!("{dir}/job.{:08}", job_num);
+            job_num += 1;
+            let mut job = Job::new(
+                Self::new(filename, tmpl.clone(), charge, mol.clone()),
+                count,
+            );
+            job.coeff = coeff;
+            jobs.push(job);
+            count += 1;
+        }
+        jobs
+    }
 }
 
 #[derive(Debug, Clone)]

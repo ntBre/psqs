@@ -6,7 +6,7 @@ use psqs::{
 };
 
 fn main() {
-    let mp = Mopac::new(
+    let mp = Mopac::new_full(
         String::from("testfiles/job"),
         None,
         Rc::new(Geom::Xyz(Vec::new())),

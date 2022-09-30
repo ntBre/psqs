@@ -25,7 +25,7 @@ fn test_mopac() -> Mopac {
             -7.471929000000, 13.335519000000, 10.778326000000,
             11.528134000000, 9.486212000000, 0.717322000000,
         ];
-    Mopac::new(
+    Mopac::new_full(
         String::from("/tmp/test"),
         Some(Rc::new(Params::from(
             names.iter().map(|s| s.to_string()).collect(),

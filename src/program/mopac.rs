@@ -10,7 +10,7 @@ use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Write};
 use std::rc::Rc;
 
-use super::{Job, Procedure, ProgramResult, Template};
+use super::{Procedure, ProgramResult, Template};
 
 /// kcal/mol per hartree
 pub const KCALHT: f64 = 627.5091809;
@@ -183,7 +183,7 @@ Comment line 2
 }
 
 impl Mopac {
-    pub fn new(
+    pub fn new_full(
         filename: String,
         params: Option<Rc<Params>>,
         geom: Rc<Geom>,
@@ -199,43 +199,6 @@ impl Mopac {
             charge,
             template,
         }
-    }
-
-    /// Build the jobs described by `moles` in memory, but don't write any of their
-    /// files yet
-    #[allow(clippy::too_many_arguments)]
-    pub fn build_jobs(
-        moles: &Vec<Rc<Geom>>,
-        params: Option<&Params>,
-        dir: &'static str,
-        start_index: usize,
-        coeff: f64,
-        job_num: usize,
-        charge: isize,
-        tmpl: Template,
-    ) -> Vec<Job<Mopac>> {
-        let mut count: usize = start_index;
-        let mut job_num = job_num;
-        let mut jobs = Vec::new();
-        let params = params.map(|p| Rc::new(p.clone()));
-        for mol in moles {
-            let filename = format!("{dir}/job.{:08}", job_num);
-            job_num += 1;
-            let mut job = Job::new(
-                Mopac::new(
-                    filename,
-                    params.clone(),
-                    mol.clone(),
-                    charge,
-                    tmpl.clone(),
-                ),
-                count,
-            );
-            job.coeff = coeff;
-            jobs.push(job);
-            count += 1;
-        }
-        jobs
     }
 
     fn write_params(params: &Rc<Params>, filename: &str) {
