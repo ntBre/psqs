@@ -170,7 +170,7 @@ impl Program for Molpro {
         if PANIC.is_match(&contents) {
             panic!("panic requested in read_output");
         } else if ERROR.is_match(&contents) {
-            return Err(ProgramError::ErrorInOutput);
+            return Err(ProgramError::ErrorInOutput(self.filename.clone()));
         }
 
         let mut energy = None;

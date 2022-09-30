@@ -99,7 +99,15 @@ pub fn geom_string(geom: &Geom) -> String {
         Geom::Xyz(geom) => {
             let mut ret = String::with_capacity(50 * geom.len());
             for g in geom {
-                writeln!(ret, "{} {} {} {}", g.label(), g.x, g.y, g.z).unwrap();
+                writeln!(
+                    ret,
+                    "{} {:.12} {:.12} {:.12}",
+                    g.label(),
+                    g.x,
+                    g.y,
+                    g.z
+                )
+                .unwrap();
             }
             ret
         }

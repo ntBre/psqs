@@ -95,7 +95,7 @@ pub(crate) trait Drain {
                         }
                     }
                     Err(e) => {
-                        if e == ProgramError::ErrorInOutput {
+                        if e.is_error_in_output() {
                             return Err(e);
                         }
                         queue.drain_err_case(

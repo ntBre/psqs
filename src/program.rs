@@ -14,9 +14,19 @@ pub struct ProgramResult {
 #[derive(Debug, PartialEq, Eq)]
 pub enum ProgramError {
     FileNotFound,
-    ErrorInOutput,
+    ErrorInOutput(String),
     EnergyNotFound,
     EnergyParseError,
+}
+
+impl ProgramError {
+    /// Returns `true` if the program error is [`ErrorInOutput`].
+    ///
+    /// [`ErrorInOutput`]: ProgramError::ErrorInOutput
+    #[must_use]
+    pub fn is_error_in_output(&self) -> bool {
+        matches!(self, Self::ErrorInOutput(..))
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
