@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use psqs::{
     geom::Geom,
     program::{mopac::Mopac, Program, Template},
@@ -6,9 +8,10 @@ use psqs::{
 fn main() {
     let mp = Mopac::new(
         String::from("testfiles/job"),
-        Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
+        None,
+        Rc::new(Geom::Xyz(Vec::new())),
         0,
-        Geom::Xyz(Vec::new()),
+        Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
     );
     let mut res = Vec::new();
     for _ in 0..1000 {
