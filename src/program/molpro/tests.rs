@@ -148,7 +148,7 @@ mod read_output {
         let got = m.read_output().unwrap();
         let want = ProgramResult {
             energy: -76.369839620286,
-            cart_geom: vec![
+            cart_geom: Some(vec![
                 //
                 Atom::new_from_label(
                     "O",
@@ -168,7 +168,7 @@ mod read_output {
                     -0.7574590773,
                     0.5217905246,
                 ),
-            ],
+            ]),
         };
 
         assert_eq!(got, want);

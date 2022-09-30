@@ -235,17 +235,13 @@ impl Mopac {
             return Err(ProgramError::FileNotFound);
         };
         let lines = BufReader::new(f).lines().flatten();
-        let mut res = ProgramResult {
-            energy: 0.0,
-            cart_geom: Vec::new(),
-        };
+        let mut energy = None;
         lazy_static! {
             static ref HEAT: Regex = Regex::new("HEAT_OF_FORMATION").unwrap();
             static ref ATOM: Regex = Regex::new("ATOM_X_OPT").unwrap();
             static ref ELEMENT: Regex = Regex::new("ATOM_EL").unwrap();
             static ref CHARGE: Regex = Regex::new("ATOM_CHARGES").unwrap();
         }
-        let mut ok = false;
         #[derive(PartialEq)]
         enum State {
             Geom,
@@ -273,8 +269,7 @@ impl Mopac {
                 let fields: Vec<&str> = line.trim().split('=').collect();
                 match fields[1].replace('D', "E").parse::<f64>() {
                     Ok(f) => {
-                        res.energy = f / KCALHT;
-                        ok = true;
+                        energy = Some(f / KCALHT);
                     }
                     Err(_) => {
                         return Err(ProgramError::EnergyParseError);
@@ -292,7 +287,6 @@ impl Mopac {
                         .map(|s| s.parse().unwrap())
                         .collect(),
                 );
-                ok = true;
             } else if !guard.element && ELEMENT.is_match(&line) {
                 state = State::Labels;
                 guard.element = true;
@@ -304,13 +298,19 @@ impl Mopac {
                 state = State::None;
             }
         }
-        for (c, coord) in coords.iter().enumerate() {
-            res.cart_geom.push(Atom::new_from_label(
-                &labels[c], coord[0], coord[1], coord[2],
-            ));
-        }
-        if ok {
-            Ok(res)
+        let cart_geom = if coords.is_empty() {
+            None
+        } else {
+            let mut ret = Vec::new();
+            for (c, coord) in coords.iter().enumerate() {
+                ret.push(Atom::new_from_label(
+                    &labels[c], coord[0], coord[1], coord[2],
+                ));
+            }
+            Some(ret)
+        };
+        if let Some(energy) = energy {
+            Ok(ProgramResult { energy, cart_geom })
         } else {
             Err(ProgramError::EnergyNotFound)
         }

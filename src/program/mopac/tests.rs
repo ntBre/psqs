@@ -184,7 +184,7 @@ fn test_read_output() {
             -0.000000000000026804,
         ),
     ];
-    assert_eq!(got, want);
+    assert_eq!(got, Some(want));
 
     // failure in output
     let mp = Mopac::new(

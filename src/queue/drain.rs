@@ -144,7 +144,7 @@ impl Drain for Opt {
         job: &mut Job<P>,
         res: ProgramResult,
     ) {
-        dst[job.index] = Geom::Xyz(res.cart_geom);
+        dst[job.index] = Geom::Xyz(res.cart_geom.unwrap());
     }
 }
 
