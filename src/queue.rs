@@ -25,7 +25,8 @@ pub struct Resubmit {
     pub job_id: String,
 }
 
-pub trait Queue<P>
+/// a trait for all of the program-independent parts of a [Queue]
+pub trait SubQueue<P>
 where
     P: Program + Clone,
 {
@@ -33,8 +34,6 @@ where
     const SCRIPT_EXT: &'static str;
 
     fn dir(&self) -> &str;
-
-    fn write_submit_script(&self, infiles: &[String], filename: &str);
 
     fn submit_command(&self) -> &str;
 
@@ -57,6 +56,17 @@ where
 
     /// the command to check the status of jobs in the queue
     fn stat_cmd(&self) -> String;
+
+    /// return a HashSet of jobs found in the queue based on the output of
+    /// `stat_cmd`
+    fn status(&self) -> HashSet<String>;
+}
+
+pub trait Queue<P>: SubQueue<P>
+where
+    P: Program + Clone,
+{
+    fn write_submit_script(&self, infiles: &[String], filename: &str);
 
     /// take a name of a Program input file with the extension attached, replace
     /// the extension (ext) with _redo.ext and write _redo.SCRIPT_EXT, then
@@ -86,10 +96,6 @@ where
             job_id,
         }
     }
-
-    /// return a HashSet of jobs found in the queue based on the output of
-    /// `stat_cmd`
-    fn status(&self) -> HashSet<String>;
 
     /// Build a chunk of jobs by writing the Program input file and the
     /// corresponding submission script and then submitting the script
@@ -147,8 +153,7 @@ where
         }
     }
 
-    /// optimize is a copy of drain for optimizing jobs. TODO combine them by
-    /// abstracting the common aspects
+    /// optimize is a copy of drain for optimizing jobs
     fn optimize(
         &self,
         jobs: &mut [Job<P>],

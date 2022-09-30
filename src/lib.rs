@@ -6,6 +6,9 @@ pub mod queue;
 
 mod dump;
 
+#[cfg(test)]
+mod tests;
+
 /// from [StackOverflow](https://stackoverflow.com/a/45145246)
 #[macro_export]
 macro_rules! string {

@@ -5,6 +5,8 @@ use std::io::Write;
 use crate::program::Program;
 use crate::queue::Queue;
 
+use super::SubQueue;
+
 /// Minimal implementation for testing MOPAC locally
 #[derive(Debug)]
 pub struct LocalQueue {
@@ -42,7 +44,9 @@ impl<P: Program + Clone> Queue<P> for LocalQueue {
         });
         write!(file, "{}", body).expect("failed to write submit script");
     }
+}
 
+impl<P: Program + Clone> SubQueue<P> for LocalQueue {
     fn submit_command(&self) -> &str {
         "bash"
     }

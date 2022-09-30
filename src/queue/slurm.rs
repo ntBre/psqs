@@ -3,7 +3,10 @@ use std::fs::File;
 use std::io::Write;
 
 use crate::program::mopac::Mopac;
+use crate::program::Program;
 use crate::queue::Queue;
+
+use super::SubQueue;
 
 /// Slurm is a type for holding the information for submitting a slurm job.
 /// `filename` is the name of the Slurm submission script
@@ -66,7 +69,9 @@ export LD_LIBRARY_PATH=/home/qc/mopac2016/\n",
         };
         write!(file, "{}", body).expect("failed to write params file");
     }
+}
 
+impl<P: Program + Clone> SubQueue<P> for Slurm {
     fn submit_command(&self) -> &str {
         "sbatch"
     }
@@ -110,7 +115,8 @@ export LD_LIBRARY_PATH=/home/qc/mopac2016/\n",
 
     fn status(&self) -> HashSet<String> {
         let mut ret = HashSet::new();
-        let lines = self.stat_cmd();
+        // wut?
+        let lines = <Slurm as SubQueue<P>>::stat_cmd(self);
         let lines = lines.lines();
         for line in lines {
             if !line.contains("JOBID") {

@@ -12,6 +12,7 @@ impl Dump {
             max: size,
         }
     }
+
     pub(crate) fn add(&mut self, files: Vec<String>) {
         for file in files {
             if self.ptr == self.max - 1 {
