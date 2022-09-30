@@ -8,43 +8,48 @@ use crate::queue::{self, Queue, SubQueue};
 
 use super::*;
 
+fn test_params() -> Params {
+    Params {
+        names: string![
+            "USS", "ZS", "BETAS", "GSS", "USS", "UPP", "ZS", "ZP", "BETAS",
+            "BETAP", "GSS", "GPP", "GSP", "GP2", "HSP"
+        ],
+        atoms: string![
+            "H", "H", "H", "H", "C", "C", "C", "C", "C", "C", "C", "C", "C",
+            "C", "C"
+        ],
+        values: nalgebra::dvector![
+            -11.246958000000,
+            1.268641000000,
+            -8.352984000000,
+            14.448686000000,
+            -51.089653000000,
+            -39.937920000000,
+            2.047558000000,
+            1.702841000000,
+            -15.385236000000,
+            -7.471929000000,
+            13.335519000000,
+            10.778326000000,
+            11.528134000000,
+            9.486212000000,
+            0.717322000000
+        ],
+    }
+}
+
 fn test_mopac() -> Mopac {
-    let names = vec![
-        "USS", "ZS", "BETAS", "GSS", "USS", "UPP", "ZS", "ZP", "BETAS",
-        "BETAP", "GSS", "GPP", "GSP", "GP2", "HSP",
-    ];
-    let atoms = vec![
-        "H", "H", "H", "H", "C", "C", "C", "C", "C", "C", "C", "C", "C", "C",
-        "C",
-    ];
-    #[rustfmt::skip]
-    let values = vec![
-        -11.246958000000, 1.268641000000, -8.352984000000,
-        14.448686000000, -51.089653000000, -39.937920000000,
-        2.047558000000, 1.702841000000, -15.385236000000,
-        -7.471929000000, 13.335519000000, 10.778326000000,
-        11.528134000000, 9.486212000000, 0.717322000000,
-    ];
     Mopac::new(
         String::from("/tmp/test"),
-        Some(Rc::new(Params::from(
-            names.iter().map(|s| s.to_string()).collect(),
-            atoms.iter().map(|s| s.to_string()).collect(),
-            values,
-        ))),
-        Rc::new(Geom::Xyz(Vec::new())),
-        0,
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
+        0,
+        Geom::Xyz(Vec::new()),
     )
 }
 
 #[test]
 fn test_write_input() {
-    let mut tm = Mopac {
-        params: None,
-        ..test_mopac()
-    };
-    tm.param_dir = "/tmp".to_string();
+    let mut tm = Mopac { ..test_mopac() };
     tm.write_input(Procedure::SinglePt);
     let got = fs::read_to_string("/tmp/test.mop").expect("file not found");
     let want = "scfcrt=1.D-21 aux(precision=14) PM6 A0 charge=0 1SCF XYZ
@@ -60,17 +65,16 @@ Comment line 2
 #[test]
 fn test_write_input_with_params() {
     let mut tm = test_mopac();
-    tm.param_dir = "/tmp".to_string();
+    tm.write_params(&test_params(), "/tmp");
     tm.write_input(Procedure::SinglePt);
     let got = fs::read_to_string("/tmp/test.mop").expect("file not found");
     let want = format!(
-        "scfcrt=1.D-21 aux(precision=14) PM6 A0 charge=0 1SCF \
-	     external={} XYZ
+        "scfcrt=1.D-21 aux(precision=14) PM6 A0 external={} charge=0 1SCF XYZ
 Comment line 1
 Comment line 2
 
 ",
-        tm.param_file,
+        tm.param_file.unwrap(),
     );
     assert_eq!(got, want);
     fs::remove_file("/tmp/test.mop").unwrap();
@@ -78,9 +82,10 @@ Comment line 2
 
 #[test]
 fn test_write_params() {
-    let tm = test_mopac();
-    Mopac::write_params(&tm.params.unwrap(), &String::from("/tmp/params.dat"));
-    let got = fs::read_to_string("/tmp/params.dat").expect("file not found");
+    let mut tm = test_mopac();
+    tm.write_params(&test_params(), "/tmp");
+    let got = fs::read_to_string(tm.param_file.as_ref().unwrap())
+        .expect("file not found");
     let want = "USS H -11.246958000000
 ZS H 1.268641000000
 BETAS H -8.352984000000
@@ -98,7 +103,7 @@ GP2 C 9.486212000000
 HSP C 0.717322000000
 ";
     assert_eq!(got, want);
-    fs::remove_file("/tmp/params.dat").unwrap();
+    fs::remove_file(tm.param_file.unwrap()).unwrap();
 }
 
 extern crate test;
@@ -108,10 +113,9 @@ fn bench_read_output(b: &mut Bencher) {
     // success
     let mp = Mopac::new(
         String::from("testfiles/job"),
-        None,
-        Rc::new(Geom::Xyz(Vec::new())),
-        0,
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
+        0,
+        Geom::Xyz(Vec::new()),
     );
     b.iter(|| mp.read_output());
 }
@@ -119,7 +123,6 @@ fn bench_read_output(b: &mut Bencher) {
 #[bench]
 fn bench_write_input(b: &mut Bencher) {
     let mut tm = test_mopac();
-    tm.param_dir = "/tmp".to_string();
     b.iter(|| tm.write_input(Procedure::SinglePt));
 }
 
@@ -134,10 +137,9 @@ fn test_read_output() {
     // success
     let mp = Mopac::new(
         String::from("testfiles/job"),
-        None,
-        Rc::new(Geom::Xyz(Vec::new())),
-        0,
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
+        0,
+        Geom::Xyz(Vec::new()),
     );
     let got = mp.read_output().unwrap().energy;
     let want = 9.712_794_745_916_472e1 / KCALHT;
@@ -146,10 +148,9 @@ fn test_read_output() {
     // opt success
     let mp = Mopac::new(
         String::from("testfiles/opt"),
-        None,
-        Rc::new(Geom::Xyz(Vec::new())),
-        1,
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
+        1,
+        Geom::Xyz(Vec::new()),
     );
     let got = mp.read_output().unwrap().cart_geom;
     let want = vec![
@@ -189,10 +190,9 @@ fn test_read_output() {
     // failure in output
     let mp = Mopac::new(
         String::from("testfiles/nojob"),
-        None,
-        Rc::new(Geom::Xyz(Vec::new())),
-        0,
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
+        0,
+        Geom::Xyz(Vec::new()),
     );
     let got = mp.read_output();
     assert_eq!(got.err().unwrap(), ProgramError::EnergyNotFound);
@@ -200,10 +200,9 @@ fn test_read_output() {
     // failure in aux
     let mp = Mopac::new(
         String::from("testfiles/noaux"),
-        None,
-        Rc::new(Geom::Xyz(Vec::new())),
-        0,
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
+        0,
+        Geom::Xyz(Vec::new()),
     );
     let got = mp.read_output();
     assert_eq!(got.err().unwrap(), ProgramError::FileNotFound);

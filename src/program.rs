@@ -1,5 +1,7 @@
 use symm::Atom;
 
+use crate::geom::Geom;
+
 pub mod molpro;
 pub mod mopac;
 
@@ -64,6 +66,13 @@ pub trait Program {
     /// Return all the filenames associated with the Program for deletion when
     /// it finishes
     fn associated_files(&self) -> Vec<String>;
+
+    fn new(
+        filename: String,
+        template: Template,
+        charge: isize,
+        geom: Geom,
+    ) -> Self;
 }
 
 #[derive(Debug, Clone)]

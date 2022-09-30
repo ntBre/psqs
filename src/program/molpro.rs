@@ -17,8 +17,8 @@ pub struct Molpro {
     geom: Geom,
 }
 
-impl Molpro {
-    pub fn new(
+impl Program for Molpro {
+    fn new(
         filename: String,
         template: Template,
         charge: isize,
@@ -31,9 +31,7 @@ impl Molpro {
             geom,
         }
     }
-}
 
-impl Program for Molpro {
     fn filename(&self) -> String {
         self.filename.clone()
     }
