@@ -142,10 +142,10 @@ Comment line 2
     /// occurs (file not found, not written to yet, etc) None is returned.
     fn read_output(&self) -> Result<ProgramResult, ProgramError> {
         let outfile = format!("{}.out", &self.filename);
-        let contents = match read_to_string(outfile) {
+        let contents = match read_to_string(&outfile) {
             Ok(s) => s,
             Err(_) => {
-                return Err(ProgramError::FileNotFound);
+                return Err(ProgramError::FileNotFound(outfile));
             }
         };
         lazy_static! {
@@ -160,7 +160,7 @@ Comment line 2
         } else if DONE.is_match(&contents) {
             return self.read_aux();
         }
-        Err(ProgramError::EnergyNotFound)
+        Err(ProgramError::EnergyNotFound(outfile))
     }
 
     fn associated_files(&self) -> Vec<String> {
@@ -256,7 +256,7 @@ impl Mopac {
         let f = if let Ok(file) = File::open(&auxfile) {
             file
         } else {
-            return Err(ProgramError::FileNotFound);
+            return Err(ProgramError::FileNotFound(auxfile));
         };
         let lines = BufReader::new(f).lines().flatten();
         let mut energy = None;
@@ -296,7 +296,7 @@ impl Mopac {
                         energy = Some(f / KCALHT);
                     }
                     Err(_) => {
-                        return Err(ProgramError::EnergyParseError);
+                        return Err(ProgramError::EnergyParseError(auxfile));
                     }
                 }
                 guard.heat = true;
@@ -336,7 +336,7 @@ impl Mopac {
         if let Some(energy) = energy {
             Ok(ProgramResult { energy, cart_geom })
         } else {
-            Err(ProgramError::EnergyNotFound)
+            Err(ProgramError::EnergyNotFound(auxfile))
         }
     }
 }

@@ -13,10 +13,10 @@ pub struct ProgramResult {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ProgramError {
-    FileNotFound,
+    FileNotFound(String),
     ErrorInOutput(String),
-    EnergyNotFound,
-    EnergyParseError,
+    EnergyNotFound(String),
+    EnergyParseError(String),
 }
 
 impl ProgramError {

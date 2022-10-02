@@ -95,15 +95,13 @@ pub(crate) trait Drain {
                         }
                     }
                     Err(e) => {
-                        if e.is_error_in_output() {
-                            return Err(e);
-                        }
-                        queue.drain_err_case(
-                            e,
-                            &mut qstat,
-                            &mut slurm_jobs,
-                            job,
-                        );
+                        panic!("drain error: {e:?}");
+                        // queue.drain_err_case(
+                        //     e,
+                        //     &mut qstat,
+                        //     &mut slurm_jobs,
+                        //     job,
+                        // );
                     }
                 }
             }

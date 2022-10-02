@@ -153,10 +153,10 @@ impl Program for Molpro {
 
     fn read_output(&self) -> Result<ProgramResult, ProgramError> {
         let outfile = format!("{}.out", &self.filename);
-        let contents = match read_to_string(outfile) {
+        let contents = match read_to_string(&outfile) {
             Ok(s) => s,
             Err(_) => {
-                return Err(ProgramError::FileNotFound);
+                return Err(ProgramError::FileNotFound(outfile));
             }
         };
         lazy_static! {
@@ -170,7 +170,7 @@ impl Program for Molpro {
         if PANIC.is_match(&contents) {
             panic!("panic requested in read_output");
         } else if ERROR.is_match(&contents) {
-            return Err(ProgramError::ErrorInOutput(self.filename.clone()));
+            return Err(ProgramError::ErrorInOutput(outfile));
         }
 
         let mut energy = None;
@@ -186,10 +186,10 @@ impl Program for Molpro {
                     energy = if let Ok(v) = e.parse::<f64>() {
                         Some(v)
                     } else {
-                        return Err(ProgramError::EnergyParseError);
+                        return Err(ProgramError::EnergyParseError(outfile));
                     }
                 } else {
-                    return Err(ProgramError::EnergyParseError);
+                    return Err(ProgramError::EnergyParseError(outfile));
                 }
             } else if GEOM.is_match(line) {
                 skip = 3;
@@ -218,7 +218,7 @@ impl Program for Molpro {
             });
         }
 
-        Err(ProgramError::EnergyNotFound)
+        Err(ProgramError::EnergyNotFound(outfile))
     }
 
     fn associated_files(&self) -> Vec<String> {
