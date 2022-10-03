@@ -12,6 +12,7 @@ use crate::{
 };
 
 pub mod local;
+pub mod pbs;
 pub mod slurm;
 use drain::*;
 mod drain;

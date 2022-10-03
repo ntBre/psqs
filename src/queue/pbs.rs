@@ -141,9 +141,7 @@ impl<P: Program + Clone> SubQueue<P> for Pbs {
         self.sleep_int
     }
 
-    fn script_ext(&self) -> &str {
-        "pbs"
-    }
+    const SCRIPT_EXT: &'static str = "pbs";
 
     fn dir(&self) -> &str {
         self.dir
