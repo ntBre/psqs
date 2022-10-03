@@ -153,12 +153,12 @@ Comment line 2
             static ref ERROR: Regex = Regex::new("(?i)error").unwrap();
             static ref DONE: Regex = Regex::new(" == MOPAC DONE ==").unwrap();
         }
-        if PANIC.is_match(&contents) {
-            panic!("panic requested in read_output");
+        if DONE.is_match(&contents) {
+            return self.read_aux();
         } else if ERROR.is_match(&contents) {
             return Err(ProgramError::ErrorInOutput(self.filename.clone()));
-        } else if DONE.is_match(&contents) {
-            return self.read_aux();
+        } else if PANIC.is_match(&contents) {
+            panic!("panic requested in read_output");
         }
         Err(ProgramError::EnergyNotFound(outfile))
     }
