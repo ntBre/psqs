@@ -187,26 +187,28 @@ fn test_read_output() {
     assert_eq!(got, Some(want));
 
     // failure in output
+    let f = String::from("testfiles/nojob");
     let mp = Mopac::new_full(
-        String::from("testfiles/nojob"),
+        f.clone(),
         None,
         Rc::new(Geom::Xyz(Vec::new())),
         0,
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
     );
     let got = mp.read_output();
-    assert_eq!(got.err().unwrap(), ProgramError::EnergyNotFound);
+    assert_eq!(got.err().unwrap(), ProgramError::EnergyNotFound(f + ".out"));
 
     // failure in aux
+    let f = String::from("testfiles/noaux");
     let mp = Mopac::new_full(
-        String::from("testfiles/noaux"),
+        f.clone(),
         None,
         Rc::new(Geom::Xyz(Vec::new())),
         0,
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
     );
     let got = mp.read_output();
-    assert_eq!(got.err().unwrap(), ProgramError::FileNotFound);
+    assert_eq!(got.err().unwrap(), ProgramError::FileNotFound(f + ".aux"));
 }
 
 /// minimal queue for testing general submission
