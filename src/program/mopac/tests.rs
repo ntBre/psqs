@@ -117,6 +117,19 @@ fn bench_read_output(b: &mut Bencher) {
 }
 
 #[bench]
+fn bench_read_aux(b: &mut Bencher) {
+    // success
+    let mp = Mopac::new_full(
+        String::from("testfiles/job"),
+        None,
+        Rc::new(Geom::Xyz(Vec::new())),
+        0,
+        Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
+    );
+    b.iter(|| mp.read_aux());
+}
+
+#[bench]
 fn bench_write_input(b: &mut Bencher) {
     let mut tm = test_mopac();
     tm.param_dir = Some("/tmp".to_string());
