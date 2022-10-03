@@ -5,6 +5,9 @@ BASE = .
 test:
 	RUST_BACKTRACE=1 cargo test ${TESTFLAGS} ${ARGS}
 
+bench:
+	RUST_BACKTRACE=1 cargo bench ${TESTFLAGS} ${ARGS}
+
 profile = RUSTFLAGS='-g' cargo build --release --bin $(1); \
 	valgrind --tool=callgrind --callgrind-out-file=callgrind.out	\
 		--collect-jumps=yes --simulate-cache=yes		\
