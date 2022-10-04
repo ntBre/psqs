@@ -24,15 +24,9 @@ impl Dump {
     }
 
     fn dump(&mut self) {
-        let now = std::time::Instant::now();
-        eprintln!("dumping {} jobs", self.buf.len());
         for file in &self.buf {
             let _ = std::fs::remove_file(file);
         }
-        eprintln!(
-            "finished dumping after {} sec",
-            now.elapsed().as_millis() as f64 / 1e3
-        );
         self.ptr = 0;
     }
 }
