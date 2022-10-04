@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 
 use crate::program::molpro::Molpro;
 use crate::program::mopac::Mopac;
@@ -47,9 +48,11 @@ impl Pbs {
 impl Queue<Molpro> for Pbs {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
         // TODO I'm going to have to split the filename again for maple
+        let path = Path::new(filename);
+        let basename = path.file_name().unwrap();
         let mut body = format!(
             "#!/bin/sh
-#PBS -N {filename}
+#PBS -N {basename:?}
 #PBS -S /bin/bash
 #PBS -j oe
 #PBS -o {filename}.out
@@ -89,9 +92,11 @@ mkdir -p $TMPDIR
 
 impl Queue<Mopac> for Pbs {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
+        let path = Path::new(filename);
+        let basename = path.file_name().unwrap();
         let mut body = format!(
             "#!/bin/sh
-#PBS -N {filename}
+#PBS -N {basename:?}
 #PBS -S /bin/bash
 #PBS -j oe
 #PBS -o {filename}.out
