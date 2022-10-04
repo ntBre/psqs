@@ -5,7 +5,7 @@ use std::io::Write;
 use crate::program::Program;
 use crate::queue::Queue;
 
-use super::SubQueue;
+use super::{SubQueue, Submit};
 
 /// Minimal implementation for testing MOPAC locally
 #[derive(Debug)]
@@ -31,6 +31,8 @@ impl LocalQueue {
         }
     }
 }
+
+impl<P: Program + Clone> Submit<P> for LocalQueue {}
 
 impl<P: Program + Clone> Queue<P> for LocalQueue {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {

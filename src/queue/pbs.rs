@@ -1,14 +1,14 @@
-use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::{collections::HashSet, process::Command};
 
 use crate::program::molpro::Molpro;
 use crate::program::mopac::Mopac;
 use crate::program::Program;
 use crate::queue::Queue;
 
-use super::SubQueue;
+use super::{SubQueue, Submit};
 
 /// Pbs is a type for holding the information for submitting a pbs job.
 /// `filename` is the name of the Pbs submission script
@@ -45,9 +45,32 @@ impl Pbs {
     }
 }
 
+// default impl for Mopac
+impl Submit<Mopac> for Pbs {}
+
+// Molpro 2022 submit script requires submission from the current directory, so
+// we have to override the default impl
+impl Submit<Molpro> for Pbs {
+    fn submit(&self, filename: &str) -> String {
+        let path = Path::new(filename);
+        let dir = path.parent().unwrap();
+        let base = path.file_name().unwrap();
+        let mut cmd =
+            Command::new(<Self as SubQueue<Molpro>>::submit_command(self));
+        let cmd = cmd.arg(base).current_dir(dir);
+        match cmd.output() {
+            Ok(s) => {
+                let raw =
+                    std::str::from_utf8(&s.stdout).unwrap().trim().to_string();
+                return raw.split_whitespace().last().unwrap().to_string();
+            }
+            Err(_) => todo!(),
+        };
+    }
+}
+
 impl Queue<Molpro> for Pbs {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
-        // TODO I'm going to have to split the filename again for maple
         let path = Path::new(filename);
         let basename = path.file_name().unwrap();
         let mut body = format!(
@@ -55,7 +78,7 @@ impl Queue<Molpro> for Pbs {
 #PBS -N {basename:?}
 #PBS -S /bin/bash
 #PBS -j oe
-#PBS -o {filename}.out
+#PBS -o {basename:?}.out
 #PBS -W umask=022
 #PBS -l walltime=9999:00:00
 #PBS -l ncpus=1
@@ -74,7 +97,9 @@ mkdir -p $TMPDIR
         {
             use std::fmt::Write;
             for f in infiles {
-                writeln!(body, "molpro -t 1 --no-xml-output {f}.inp").unwrap();
+                let basename = Path::new(f).file_name().unwrap();
+                writeln!(body, "molpro -t 1 --no-xml-output {basename:?}.inp")
+                    .unwrap();
             }
             writeln!(body, "rm -rf $TMPDIR").unwrap();
         }
@@ -163,9 +188,7 @@ impl<P: Program + Clone> SubQueue<P> for Pbs {
         let user = std::env::vars()
             .find(|x| x.0 == "USER")
             .expect("couldn't find $USER env var");
-        let status = match std::process::Command::new("qstat")
-            .args(["-u", &user.1])
-            .output()
+        let status = match Command::new("qstat").args(["-u", &user.1]).output()
         {
             Ok(status) => status,
             Err(e) => panic!("failed to run squeue with {}", e),

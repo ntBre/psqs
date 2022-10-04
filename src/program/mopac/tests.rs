@@ -4,7 +4,7 @@ use std::fs::{self, read_to_string};
 use crate::program::Procedure;
 use crate::string;
 
-use crate::queue::{self, Queue, SubQueue};
+use crate::queue::{self, Queue, SubQueue, Submit};
 
 use super::*;
 
@@ -226,6 +226,8 @@ fn test_read_output() {
 
 /// minimal queue for testing general submission
 struct TestQueue;
+
+impl Submit<Mopac> for TestQueue {}
 
 impl Queue<Mopac> for TestQueue {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {

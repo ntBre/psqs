@@ -26,6 +26,22 @@ pub struct Resubmit {
     pub job_id: String,
 }
 
+pub trait Submit<P>: SubQueue<P>
+where
+    P: Program + Clone,
+{
+    /// submit `filename` to the queue and return the jobid
+    fn submit(&self, filename: &str) -> String {
+        match Command::new(self.submit_command()).arg(filename).output() {
+            Ok(s) => {
+                let raw = str::from_utf8(&s.stdout).unwrap().trim().to_string();
+                return raw.split_whitespace().last().unwrap().to_string();
+            }
+            Err(_) => todo!(),
+        };
+    }
+}
+
 /// a trait for all of the program-independent parts of a [Queue]
 pub trait SubQueue<P>
 where
@@ -44,17 +60,6 @@ where
 
     fn sleep_int(&self) -> usize;
 
-    /// submit `filename` to the queue and return the jobid
-    fn submit(&self, filename: &str) -> String {
-        match Command::new(self.submit_command()).arg(filename).output() {
-            Ok(s) => {
-                let raw = str::from_utf8(&s.stdout).unwrap().trim().to_string();
-                return raw.split_whitespace().last().unwrap().to_string();
-            }
-            Err(_) => todo!(),
-        };
-    }
-
     /// the command to check the status of jobs in the queue
     fn stat_cmd(&self) -> String;
 
@@ -63,7 +68,7 @@ where
     fn status(&self) -> HashSet<String>;
 }
 
-pub trait Queue<P>: SubQueue<P>
+pub trait Queue<P>: SubQueue<P> + Submit<P>
 where
     P: Program + Clone,
 {

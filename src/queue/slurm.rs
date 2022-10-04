@@ -7,7 +7,7 @@ use crate::program::mopac::Mopac;
 use crate::program::Program;
 use crate::queue::Queue;
 
-use super::SubQueue;
+use super::{SubQueue, Submit};
 
 /// Slurm is a type for holding the information for submitting a slurm job.
 /// `filename` is the name of the Slurm submission script
@@ -43,6 +43,8 @@ impl Slurm {
         }
     }
 }
+
+impl<P: Program + Clone> Submit<P> for Slurm {}
 
 impl Queue<Molpro> for Slurm {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
