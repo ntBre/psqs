@@ -26,6 +26,7 @@ pub(crate) trait Drain {
 
     fn drain<P: Program + Clone, Q: Queue<P> + ?Sized>(
         &self,
+        dir: &str,
         queue: &Q,
         jobs: &mut [Job<P>],
         dst: &mut [Self::Item],
@@ -44,6 +45,7 @@ pub(crate) trait Drain {
                 match chunks.next() {
                     Some(jobs) => {
                         queue.build_chunk(
+                            dir,
                             jobs,
                             chunk_num,
                             &mut slurm_jobs,

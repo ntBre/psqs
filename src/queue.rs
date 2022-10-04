@@ -107,13 +107,14 @@ where
     /// corresponding submission script and then submitting the script
     fn build_chunk<'a>(
         &self,
+        dir: &str,
         jobs: &mut [Job<P>],
         chunk_num: usize,
         slurm_jobs: &'a mut HashMap<String, usize>,
         proc: Procedure,
     ) {
         let queue_file =
-            format!("{}/main{}.{}", self.dir(), chunk_num, Self::SCRIPT_EXT);
+            format!("{}/main{}.{}", dir, chunk_num, Self::SCRIPT_EXT);
         let jl = jobs.len();
         let mut filenames = Vec::with_capacity(jl);
         for job in &mut *jobs {
@@ -162,25 +163,28 @@ where
     /// optimize is a copy of drain for optimizing jobs
     fn optimize(
         &self,
+        dir: &str,
         jobs: &mut [Job<P>],
         dst: &mut [Geom],
     ) -> Result<(), ProgramError> {
-        Opt.drain(self, jobs, dst)
+        Opt.drain(dir, self, jobs, dst)
     }
 
     fn drain(
         &self,
+        dir: &str,
         jobs: &mut [Job<P>],
         dst: &mut [f64],
     ) -> Result<(), ProgramError> {
-        Single.drain(self, jobs, dst)
+        Single.drain(dir, self, jobs, dst)
     }
 
     fn energize(
         &self,
+        dir: &str,
         jobs: &mut [Job<P>],
         dst: &mut [ProgramResult],
     ) -> Result<(), ProgramError> {
-        Both.drain(self, jobs, dst)
+        Both.drain(dir, self, jobs, dst)
     }
 }
