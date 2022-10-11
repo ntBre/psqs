@@ -1,11 +1,11 @@
 use core::time;
 use std::{
     collections::{HashMap, HashSet},
+    sync::mpsc,
     thread,
 };
 
 use crate::{
-    dump::Dump,
     geom::Geom,
     program::{Job, Procedure, Program, ProgramError, ProgramResult},
 };
@@ -35,7 +35,17 @@ pub(crate) trait Drain {
         let mut cur_jobs = Vec::new();
         let mut slurm_jobs = HashMap::new();
         let mut remaining = jobs.len();
-        let mut dump = Dump::new(queue.chunk_size() * 5);
+
+        let (sender, receiver) = mpsc::channel();
+        let dump = thread::spawn(move || {
+            for file in receiver {
+                let e = std::fs::remove_file(&file);
+                if let Err(e) = e {
+                    eprintln!("failed to remove {file} with {e}");
+                }
+            }
+        });
+
         let mut qstat = HashSet::<String>::new();
         let mut chunks = jobs.chunks_mut(queue.chunk_size());
         let mut out_of_jobs = false;
@@ -73,7 +83,10 @@ pub(crate) trait Drain {
                     Ok(res) => {
                         to_remove.push(i);
                         self.set_result(dst, *job, res);
-                        dump.add(job.program.associated_files());
+                        // dump.add(job.program.associated_files());
+                        for f in job.program.associated_files() {
+                            sender.send(f).unwrap();
+                        }
                         finished += 1;
                         remaining -= 1;
                         let job_name = job.pbs_file.as_str();
@@ -89,15 +102,15 @@ pub(crate) trait Drain {
                         };
                         count -= 1;
                         if count == 0 {
-                            // delete the submit script
-                            dump.add(vec![
-                                job_name.to_string(),
-                                format!("{}.out", job_name),
-                            ]);
+                            // delete the submit script and output file
+                            sender.send(job_name.to_string()).unwrap();
+                            sender.send(format!("{}.out", job_name)).unwrap();
                         }
                     }
                     Err(e) => {
                         if e.is_error_in_output() {
+                            drop(sender);
+                            dump.join().unwrap();
                             return Err(e);
                         }
                         queue.drain_err_case(
@@ -116,6 +129,8 @@ pub(crate) trait Drain {
                 cur_jobs.swap_remove(i);
             }
             if cur_jobs.is_empty() && out_of_jobs {
+                drop(sender);
+                dump.join().unwrap();
                 return Ok(());
             }
             if finished == 0 {

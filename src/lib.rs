@@ -4,8 +4,6 @@ pub mod geom;
 pub mod program;
 pub mod queue;
 
-mod dump;
-
 #[cfg(test)]
 mod tests;
 
