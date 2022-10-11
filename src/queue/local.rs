@@ -36,10 +36,12 @@ impl<P: Program + Clone> Submit<P> for LocalQueue {}
 
 impl<P: Program + Clone> Queue<P> for LocalQueue {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
+        use std::fmt::Write;
         let mut body = String::from("export LD_LIBRARY_PATH=/opt/mopac/\n");
         for f in infiles {
-            body.push_str(&format!("/opt/mopac/mopac {f}.mop\n"));
+            writeln!(body, "/opt/mopac/mopac {f}.mop").unwrap();
         }
+        writeln!(body, "touch {filename}.out").unwrap();
         body.push_str("date +%s\n");
         let mut file = File::create(filename).unwrap_or_else(|_| {
             panic!("failed to create submit script `{filename}`")
