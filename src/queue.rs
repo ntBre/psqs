@@ -141,6 +141,13 @@ where
         // just overwrite the existing job with the resubmitted
         // version
         if !qstat.contains(&job.job_id) {
+            let time = job.modtime();
+            if time > job.modtime {
+                // file has been updated since we last looked at it, so need to look
+                // again
+                job.modtime = time;
+                return;
+            }
             eprintln!("resubmitting {} for {:?}", job.program.filename(), e);
             let resub = format!(
                 "{}.{}",

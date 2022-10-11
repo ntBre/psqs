@@ -1,3 +1,5 @@
+use std::time::SystemTime;
+
 use symm::Atom;
 
 use crate::geom::Geom;
@@ -54,6 +56,11 @@ pub trait Program {
     /// returns the file associated with the program's input. it should not
     /// include an extension
     fn filename(&self) -> String;
+
+    /// return the output of `self.filename()` with ".out" appended
+    fn outfile(&self) -> String {
+        format!("{}.out", self.filename())
+    }
 
     /// set `filename`
     fn set_filename(&mut self, filename: &str);
@@ -127,6 +134,9 @@ pub struct Job<P: Program> {
 
     /// the coefficient to multiply by when storing the result
     pub coeff: f64,
+
+    /// the last modified time of `program`'s output file
+    pub(crate) modtime: SystemTime,
 }
 
 impl<P: Program> Job<P> {
@@ -137,6 +147,16 @@ impl<P: Program> Job<P> {
             job_id: String::new(),
             index,
             coeff: 1.0,
+            modtime: SystemTime::UNIX_EPOCH,
         }
+    }
+
+    /// return the modtime of `self.program`'s output file
+    pub fn modtime(&self) -> SystemTime {
+        let p = self.program.outfile();
+        let meta = std::fs::metadata(&p).unwrap_or_else(|_| {
+            panic!("failed to open {}", p);
+        });
+        meta.modified().unwrap()
     }
 }
