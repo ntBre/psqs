@@ -4,7 +4,6 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use symm::Atom;
 
-use std::cell::RefCell;
 use std::collections::hash_map::DefaultHasher;
 use std::fs::{read_to_string, File};
 use std::hash::{Hash, Hasher};
@@ -53,8 +52,6 @@ pub struct Mopac {
 
     /// [Template] for the input file
     pub template: Template,
-
-    last_hash: RefCell<u64>,
 }
 
 impl Program for Mopac {
@@ -72,7 +69,6 @@ impl Program for Mopac {
             template,
             params: None,
             param_dir: None,
-            last_hash: RefCell::new(0),
         }
     }
 
@@ -152,15 +148,6 @@ Comment line 2
                 return Err(ProgramError::FileNotFound(outfile));
             }
         };
-        let mut hasher = DefaultHasher::new();
-        contents.hash(&mut hasher);
-        let hash = hasher.finish();
-        let mut s = self.last_hash.borrow_mut();
-        // file hasn't changed
-        if *s == hash {
-            return Err(ProgramError::EnergyNotFound(outfile));
-        }
-        *s = hash;
         lazy_static! {
             static ref PANIC: Regex = Regex::new("(?i)panic").unwrap();
             static ref ERROR: Regex = Regex::new("(?i)error").unwrap();
@@ -173,7 +160,7 @@ Comment line 2
         } else if PANIC.is_match(&contents) {
             panic!("panic requested in read_output");
         }
-        Err(ProgramError::EnergyNotFound(outfile))
+        Err(ProgramError::EnergyNotFound(outfile + " - end"))
     }
 
     fn associated_files(&self) -> Vec<String> {
@@ -211,7 +198,6 @@ impl Mopac {
             param_dir: Some("tmparam".to_string()),
             charge,
             template,
-            last_hash: RefCell::new(0),
         }
     }
 
