@@ -110,7 +110,12 @@ pub(crate) trait Drain {
                     Err(e) => {
                         if e.is_error_in_output() {
                             drop(sender);
+                            let now = std::time::Instant::now();
                             dump.join().unwrap();
+                            eprintln!(
+                                "finished joining thread after {} s",
+                                now.elapsed().as_secs()
+                            );
                             return Err(e);
                         }
                         queue.drain_err_case(
@@ -130,7 +135,12 @@ pub(crate) trait Drain {
             }
             if cur_jobs.is_empty() && out_of_jobs {
                 drop(sender);
+                let now = std::time::Instant::now();
                 dump.join().unwrap();
+                eprintln!(
+                    "finished joining thread after {} s",
+                    now.elapsed().as_secs()
+                );
                 return Ok(());
             }
             if finished == 0 {
