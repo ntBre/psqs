@@ -35,7 +35,7 @@ where
         match Command::new(self.submit_command()).arg(filename).output() {
             Ok(s) => {
                 let raw = str::from_utf8(&s.stdout).unwrap().trim().to_string();
-                return raw.split_whitespace().last().unwrap().to_string();
+                return raw.split_whitespace().last().unwrap_or("").to_string();
             }
             Err(_) => todo!(),
         };
