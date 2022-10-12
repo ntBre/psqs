@@ -151,12 +151,14 @@ impl<P: Program> Job<P> {
         }
     }
 
-    /// return the modtime of `self.program`'s output file
+    /// return the current modtime of `self.program`'s output file, or
+    /// `self.modtime` if there is an error accessing the metadata
     pub fn modtime(&self) -> SystemTime {
         let p = self.program.outfile();
-        let meta = std::fs::metadata(&p).unwrap_or_else(|_| {
-            panic!("failed to open {}", p);
-        });
-        meta.modified().unwrap()
+        if let Ok(meta) = std::fs::metadata(&p) {
+            meta.modified().unwrap()
+        } else {
+            self.modtime
+        }
     }
 }
