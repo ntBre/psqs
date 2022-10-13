@@ -238,7 +238,8 @@ impl Mopac {
         jobs
     }
 
-    fn write_params(params: &Rc<Params>, filename: &str) {
+    /// write the `params` to `filename`
+    pub fn write_params(params: &Params, filename: &str) {
         let body = params.to_string();
         let mut file = match File::create(filename) {
             Ok(f) => f,
