@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 use nalgebra as na;
 
@@ -93,15 +93,12 @@ FN11           C      0.046302000000"
     assert_eq!(got, want);
 }
 
-impl ToString for Params {
-    fn to_string(&self) -> String {
-        use std::fmt::Write;
-        let mut ret = String::new();
+impl Display for Params {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (i, n) in self.names.iter().enumerate() {
-            writeln!(ret, "{} {} {:.12}", n, self.atoms[i], self.values[i])
-                .unwrap();
+            writeln!(f, "{} {} {:.12}", n, self.atoms[i], self.values[i])?;
         }
-        ret
+        Ok(())
     }
 }
 
