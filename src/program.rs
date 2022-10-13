@@ -40,7 +40,7 @@ pub enum Procedure {
 
 #[derive(Clone, Debug)]
 pub struct Template {
-    header: String,
+    pub header: String,
 }
 
 impl Template {
