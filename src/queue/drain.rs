@@ -3,6 +3,7 @@ use std::{
     collections::{HashMap, HashSet},
     sync::mpsc,
     thread,
+    time::Duration,
 };
 
 use crate::{
@@ -46,6 +47,15 @@ pub(crate) trait Drain {
             }
         });
 
+        #[derive(Default)]
+        struct Time {
+            writing: Duration,
+            reading: Duration,
+            sleeping: Duration,
+        }
+
+        let mut time = Time::default();
+
         let mut qstat = HashSet::<String>::new();
         let mut chunks = jobs.chunks_mut(queue.chunk_size());
         let mut out_of_jobs = false;
@@ -54,6 +64,7 @@ pub(crate) trait Drain {
             while cur_jobs.len() < queue.job_limit() {
                 match chunks.next() {
                     Some(jobs) => {
+                        let now = std::time::Instant::now();
                         queue.build_chunk(
                             dir,
                             jobs,
@@ -63,9 +74,15 @@ pub(crate) trait Drain {
                         );
                         let job_id = jobs[0].job_id.clone();
                         qstat.insert(job_id);
+                        let elapsed = now.elapsed();
                         if DEBUG {
-                            eprintln!("submitted chunk {}", chunk_num);
+                            eprintln!(
+                                "submitted chunk {} after {:.1} s",
+                                chunk_num,
+                                elapsed.as_millis() as f64 / 1000.0
+                            );
                         }
+                        time.writing += elapsed;
                         chunk_num += 1;
                         cur_jobs.extend(jobs);
                     }
@@ -75,6 +92,7 @@ pub(crate) trait Drain {
                     }
                 }
             }
+            let now = std::time::Instant::now();
             // collect output
             let mut finished = 0;
             let mut to_remove = Vec::new();
@@ -109,11 +127,11 @@ pub(crate) trait Drain {
                     }
                     Err(e) => {
                         if e.is_error_in_output() {
-                            drop(sender);
                             let now = std::time::Instant::now();
+                            drop(sender);
                             dump.join().unwrap();
                             eprintln!(
-                                "finished joining thread after {} s",
+                                "finished dropping and joining thread after {} s",
                                 now.elapsed().as_secs()
                             );
                             return Err(e);
@@ -134,24 +152,37 @@ pub(crate) trait Drain {
                 cur_jobs.swap_remove(i);
             }
             if cur_jobs.is_empty() && out_of_jobs {
-                drop(sender);
                 let now = std::time::Instant::now();
+                drop(sender);
                 dump.join().unwrap();
                 eprintln!(
-                    "finished joining thread after {} s",
+                    "finished dropping and joining thread after {} s",
                     now.elapsed().as_secs()
+                );
+                eprintln!(
+                    "{:.1} s reading, {:.1} s writing, {:.1} s sleeping",
+                    time.reading.as_millis() as f64 / 1000.0,
+                    time.writing.as_millis() as f64 / 1000.0,
+                    time.sleeping.as_millis() as f64 / 1000.0,
                 );
                 return Ok(());
             }
             if finished == 0 {
                 eprintln!("{} jobs remaining", remaining);
                 qstat = queue.status();
-                thread::sleep(time::Duration::from_secs(
-                    queue.sleep_int() as u64
-                ));
-            } else if finished > remaining / 10 {
-                eprintln!("{} jobs remaining", remaining);
+                let d = time::Duration::from_secs(queue.sleep_int() as u64);
+                time.sleeping += d;
+                thread::sleep(d);
             }
+            let elapsed = now.elapsed();
+            if DEBUG {
+                eprintln!(
+                    "finished {} jobs in {:.1} s",
+                    finished,
+                    elapsed.as_millis() as f64 / 1000.0
+                );
+            }
+            time.reading += elapsed;
         }
     }
 }
