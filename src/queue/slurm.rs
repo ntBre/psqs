@@ -54,7 +54,6 @@ impl Queue<Molpro> for Slurm {
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
 #SBATCH -o {filename}.out
-#SBATCH --no-requeue
 #SBATCH --mem=8gb
 "
         );
