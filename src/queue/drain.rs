@@ -1,7 +1,6 @@
 use core::time;
 use std::{
     collections::{HashMap, HashSet},
-    sync::mpsc,
     thread,
     time::Duration,
 };
@@ -9,9 +8,24 @@ use std::{
 use crate::{
     geom::Geom,
     program::{Job, Procedure, Program, ProgramError, ProgramResult},
+    queue::drain::dump::Dump,
 };
 
 use super::{Queue, DEBUG};
+
+macro_rules! time {
+    ($msg:expr, $body:block) => {
+        let now = std::time::Instant::now();
+        $body;
+        eprintln!(
+            "finished {} after {:.1} s",
+            $msg,
+            now.elapsed().as_millis() as f64 / 1000.0
+        );
+    };
+}
+
+mod dump;
 
 pub(crate) trait Drain {
     type Item;
@@ -37,15 +51,7 @@ pub(crate) trait Drain {
         let mut slurm_jobs = HashMap::new();
         let mut remaining = jobs.len();
 
-        let (sender, receiver) = mpsc::channel();
-        let dump = thread::spawn(move || {
-            for file in receiver {
-                let e = std::fs::remove_file(&file);
-                if let Err(e) = e {
-                    eprintln!("failed to remove {file} with {e}");
-                }
-            }
-        });
+        let dump = Dump::new();
 
         #[derive(Default)]
         struct Time {
@@ -103,7 +109,7 @@ pub(crate) trait Drain {
                         self.set_result(dst, *job, res);
                         // dump.add(job.program.associated_files());
                         for f in job.program.associated_files() {
-                            sender.send(f).unwrap();
+                            dump.send(f);
                         }
                         finished += 1;
                         remaining -= 1;
@@ -121,19 +127,13 @@ pub(crate) trait Drain {
                         count -= 1;
                         if count == 0 {
                             // delete the submit script and output file
-                            sender.send(job_name.to_string()).unwrap();
-                            sender.send(format!("{}.out", job_name)).unwrap();
+                            dump.send(job_name.to_string());
+                            dump.send(format!("{}.out", job_name));
                         }
                     }
                     Err(e) => {
                         if e.is_error_in_output() {
-                            let now = std::time::Instant::now();
-                            drop(sender);
-                            dump.join().unwrap();
-                            eprintln!(
-                                "finished dropping and joining thread after {} s",
-                                now.elapsed().as_secs()
-                            );
+                            dump.shutdown();
                             return Err(e);
                         }
                         queue.drain_err_case(
@@ -151,14 +151,17 @@ pub(crate) trait Drain {
             for i in to_remove {
                 cur_jobs.swap_remove(i);
             }
-            if cur_jobs.is_empty() && out_of_jobs {
-                let now = std::time::Instant::now();
-                drop(sender);
-                dump.join().unwrap();
+            let elapsed = now.elapsed();
+            if DEBUG {
                 eprintln!(
-                    "finished dropping and joining thread after {} s",
-                    now.elapsed().as_secs()
+                    "finished {} jobs in {:.1} s",
+                    finished,
+                    elapsed.as_millis() as f64 / 1000.0
                 );
+            }
+            time.reading += elapsed;
+            if cur_jobs.is_empty() && out_of_jobs {
+                dump.shutdown();
                 eprintln!(
                     "{:.1} s reading, {:.1} s writing, {:.1} s sleeping",
                     time.reading.as_millis() as f64 / 1000.0,
@@ -174,15 +177,6 @@ pub(crate) trait Drain {
                 time.sleeping += d;
                 thread::sleep(d);
             }
-            let elapsed = now.elapsed();
-            if DEBUG {
-                eprintln!(
-                    "finished {} jobs in {:.1} s",
-                    finished,
-                    elapsed.as_millis() as f64 / 1000.0
-                );
-            }
-            time.reading += elapsed;
         }
     }
 }
