@@ -67,7 +67,7 @@ pub(crate) trait Drain {
         let mut out_of_jobs = false;
         loop {
             // build more jobs if there is room
-            while cur_jobs.len() < queue.job_limit() {
+            while !out_of_jobs && cur_jobs.len() < queue.job_limit() {
                 match chunks.next() {
                     Some(jobs) => {
                         let now = std::time::Instant::now();
