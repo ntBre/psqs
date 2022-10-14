@@ -48,7 +48,9 @@ impl Dump {
         time!("dropping", {
             drop(self.sender);
         });
-        self.signal.send(()).unwrap();
+        // it's okay for this to fail because it just means the receiving thread
+        // exited first
+        let _ = self.signal.send(());
         drop(self.signal);
         time!("joining", {
             self.handle.join().unwrap();

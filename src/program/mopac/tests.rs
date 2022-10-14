@@ -209,7 +209,10 @@ fn test_read_output() {
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
     );
     let got = mp.read_output();
-    assert_eq!(got.err().unwrap(), ProgramError::EnergyNotFound(f + ".out"));
+    assert_eq!(
+        got.err().unwrap(),
+        ProgramError::EnergyNotFound(f + ".out - end")
+    );
 
     // failure in aux
     let f = String::from("testfiles/noaux");
