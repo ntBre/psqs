@@ -90,6 +90,28 @@ impl<const N: usize> Histogram<N> {
         }
         self.total += val;
     }
+
+    /// return the count of elements in `self`
+    fn count(&self) -> usize {
+        self.data.iter().sum()
+    }
+
+    /// return the average of `self`
+    fn average(&self) -> f64 {
+        self.total / self.count() as f64
+    }
+}
+
+impl<const N: usize> Display for Histogram<N> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let bin_width = self.denom / N as f64;
+        for (i, v) in self.data.iter().enumerate() {
+            if *v > 0 {
+                writeln!(f, "{:5.2}{:5}", i as f64 * bin_width, v)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 pub(crate) trait Drain {
@@ -230,6 +252,8 @@ pub(crate) trait Drain {
                 eprintln!("total job time: {:.2} s", job_time.total);
                 eprintln!("max job time: {:.2} s", job_time.cur_max);
                 eprintln!("min job time: {:.2} s", job_time.cur_min);
+                eprintln!("avg job time: {:.2} s", job_time.average());
+                eprint!("histogram:\n{}", job_time);
                 return Ok(());
             }
             if finished == 0 {
