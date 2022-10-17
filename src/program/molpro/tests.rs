@@ -168,6 +168,7 @@ mod read_output {
                     0.5217905246,
                 ),
             ]),
+            time: 27.13,
         };
 
         assert_eq!(got, want);

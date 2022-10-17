@@ -152,9 +152,12 @@ fn test_read_output() {
         0,
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
     );
-    let got = mp.read_output().unwrap().energy;
+    let res = mp.read_output().unwrap();
+    let got = res.energy;
     let want = 9.712_794_745_916_472e1 / KCALHT;
     assert!((got - want).abs() < 1e-20);
+
+    assert_eq!(res.time, 0.015625);
 
     // opt success
     let mp = Mopac::new_full(

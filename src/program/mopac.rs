@@ -266,6 +266,7 @@ impl Mopac {
             static ref ATOM: Regex = Regex::new("ATOM_X_OPT").unwrap();
             static ref ELEMENT: Regex = Regex::new("ATOM_EL").unwrap();
             static ref CHARGE: Regex = Regex::new("ATOM_CHARGES").unwrap();
+            static ref TIME: Regex = Regex::new("CPU_TIME:SEC=").unwrap();
         }
         #[derive(PartialEq)]
         enum State {
@@ -288,9 +289,18 @@ impl Mopac {
         let mut labels = Vec::new();
         // coordinates
         let mut coords: Vec<Vec<f64>> = Vec::new();
+        let mut time = 0.0;
         for line in lines {
             // line like HEAT_OF_FORMATION:KCAL/MOL=+0.97127947459164715838D+02
-            if !guard.heat && HEAT.is_match(&line) {
+            if TIME.is_match(&line) {
+                time = line
+                    .split('=')
+                    .nth(1)
+                    .unwrap()
+                    .replace('D', "E")
+                    .parse()
+                    .unwrap();
+            } else if !guard.heat && HEAT.is_match(&line) {
                 let fields: Vec<&str> = line.trim().split('=').collect();
                 match fields[1].replace('D', "E").parse::<f64>() {
                     Ok(f) => {
@@ -335,7 +345,11 @@ impl Mopac {
             Some(ret)
         };
         if let Some(energy) = energy {
-            Ok(ProgramResult { energy, cart_geom })
+            Ok(ProgramResult {
+                energy,
+                cart_geom,
+                time,
+            })
         } else {
             Err(ProgramError::EnergyNotFound(auxfile))
         }

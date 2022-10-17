@@ -166,6 +166,7 @@ impl Program for Molpro {
         static ref ENERGY: Regex = Regex::new("energy= ").unwrap();
         static ref GEOM: Regex = Regex::new("Current geometry").unwrap();
         static ref BLANK: Regex = Regex::new(r"^\s*$").unwrap();
+        static ref TIME: Regex = Regex::new(r"^ REAL TIME").unwrap();
         }
         if PANIC.is_match(&contents) {
             panic!("panic requested in read_output");
@@ -177,9 +178,17 @@ impl Program for Molpro {
         let mut skip = 0;
         let mut geom = false;
         let mut atoms = Vec::new();
+        let mut time = 0.0;
         for line in contents.lines() {
             if skip > 0 {
                 skip -= 1;
+            } else if TIME.is_match(line) {
+                time = line
+                    .split_ascii_whitespace()
+                    .nth(3)
+                    .unwrap()
+                    .parse()
+                    .unwrap_or_else(|e| panic!("{e:#?}"));
             } else if ENERGY.is_match(line) {
                 let energy_str = line.split_whitespace().last();
                 if let Some(e) = energy_str {
@@ -215,6 +224,7 @@ impl Program for Molpro {
             return Ok(ProgramResult {
                 energy,
                 cart_geom: if atoms.is_empty() { None } else { Some(atoms) },
+                time,
             });
         }
 

@@ -11,6 +11,7 @@ pub mod mopac;
 pub struct ProgramResult {
     pub energy: f64,
     pub cart_geom: Option<Vec<Atom>>,
+    pub time: f64,
 }
 
 #[derive(Debug, PartialEq, Eq)]

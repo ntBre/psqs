@@ -28,6 +28,30 @@ macro_rules! time {
 
 mod dump;
 
+#[derive(Default)]
+struct Time {
+    writing: Duration,
+    reading_ok: Duration,
+    reading_err: Duration,
+    sleeping: Duration,
+    removing: Duration,
+}
+
+impl Display for Time {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "{:.1} s reading ok, {:.1} s reading err, \
+			  {:.1} s writing, {:.1} s sleeping, {:.1} s removing",
+            self.reading_ok.as_millis() as f64 / 1000.0,
+            self.reading_err.as_millis() as f64 / 1000.0,
+            self.writing.as_millis() as f64 / 1000.0,
+            self.sleeping.as_millis() as f64 / 1000.0,
+            self.removing.as_millis() as f64 / 1000.0,
+        )
+    }
+}
+
 pub(crate) trait Drain {
     type Item;
 
@@ -54,36 +78,13 @@ pub(crate) trait Drain {
 
         let dump = Dump::new();
 
-        #[derive(Default)]
-        struct Time {
-            writing: Duration,
-            reading_ok: Duration,
-            reading_err: Duration,
-            sleeping: Duration,
-            removing: Duration,
-        }
-
-        impl Display for Time {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                writeln!(
-                    f,
-                    "{:.1} s reading ok, {:.1} s reading err, \
-			  {:.1} s writing, {:.1} s sleeping, {:.1} s removing",
-                    self.reading_ok.as_millis() as f64 / 1000.0,
-                    self.reading_err.as_millis() as f64 / 1000.0,
-                    self.writing.as_millis() as f64 / 1000.0,
-                    self.sleeping.as_millis() as f64 / 1000.0,
-                    self.removing.as_millis() as f64 / 1000.0,
-                )
-            }
-        }
-
         let mut time = Time::default();
 
         let mut qstat = HashSet::<String>::new();
         let mut chunks = jobs.chunks_mut(queue.chunk_size());
         let mut out_of_jobs = false;
         let mut to_remove = Vec::new();
+        let mut job_time = 0.0;
         loop {
             let loop_time = std::time::Instant::now();
             // build more jobs if there is room
@@ -126,8 +127,8 @@ pub(crate) trait Drain {
                 match job.program.read_output() {
                     Ok(res) => {
                         to_remove.push(i);
+                        job_time += res.time;
                         self.set_result(dst, *job, res);
-                        // dump.add(job.program.associated_files());
                         for f in job.program.associated_files() {
                             dump.send(f);
                         }
@@ -185,6 +186,7 @@ pub(crate) trait Drain {
             if cur_jobs.is_empty() && out_of_jobs {
                 dump.shutdown();
                 eprintln!("{}", time);
+                eprintln!("total job time: {:.2} s", job_time);
                 return Ok(());
             }
             if finished == 0 {
