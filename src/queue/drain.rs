@@ -85,6 +85,7 @@ pub(crate) trait Drain {
         let mut out_of_jobs = false;
         let mut to_remove = Vec::new();
         loop {
+            let loop_time = std::time::Instant::now();
             // build more jobs if there is room
             while !out_of_jobs && cur_jobs.len() < queue.job_limit() {
                 match chunks.next() {
@@ -117,11 +118,11 @@ pub(crate) trait Drain {
                     }
                 }
             }
-            let now = std::time::Instant::now();
             // collect output
             let mut finished = 0;
             to_remove.clear();
             for (i, job) in cur_jobs.iter_mut().enumerate() {
+                let now = std::time::Instant::now();
                 match job.program.read_output() {
                     Ok(res) => {
                         to_remove.push(i);
@@ -178,7 +179,7 @@ pub(crate) trait Drain {
                 eprintln!(
                     "finished {} jobs in {:.1} s",
                     finished,
-                    now.elapsed().as_millis() as f64 / 1000.0
+                    loop_time.elapsed().as_millis() as f64 / 1000.0
                 );
             }
             if cur_jobs.is_empty() && out_of_jobs {
