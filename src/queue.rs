@@ -37,7 +37,7 @@ where
                 let raw = str::from_utf8(&s.stdout).unwrap().trim().to_string();
                 return raw.split_whitespace().last().unwrap_or("").to_string();
             }
-            Err(_) => todo!(),
+            Err(e) => panic!("{e:?}"),
         };
     }
 }
