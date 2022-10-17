@@ -155,7 +155,7 @@ cd $WORKDIR
         );
         for f in infiles {
             body.push_str(&format!(
-                "/ddn/home1/r2518/.conda/envs/mopac/bin/mopac {f}.mop\n"
+                "/ddn/home1/r2518/Packages/mopac/build/mopac {f}.mop\n"
             ));
         }
         let mut file = match File::create(filename) {
