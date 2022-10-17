@@ -1,6 +1,7 @@
 use core::time;
 use std::{
     collections::{HashMap, HashSet},
+    fmt::Display,
     thread,
     time::Duration,
 };
@@ -56,8 +57,25 @@ pub(crate) trait Drain {
         #[derive(Default)]
         struct Time {
             writing: Duration,
-            reading: Duration,
+            reading_ok: Duration,
+            reading_err: Duration,
             sleeping: Duration,
+            removing: Duration,
+        }
+
+        impl Display for Time {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                writeln!(
+                    f,
+                    "{:.1} s reading ok, {:.1} s reading err, \
+			  {:.1} s writing, {:.1} s sleeping, {:.1} s removing",
+                    self.reading_ok.as_millis() as f64 / 1000.0,
+                    self.reading_err.as_millis() as f64 / 1000.0,
+                    self.writing.as_millis() as f64 / 1000.0,
+                    self.sleeping.as_millis() as f64 / 1000.0,
+                    self.removing.as_millis() as f64 / 1000.0,
+                )
+            }
         }
 
         let mut time = Time::default();
@@ -65,6 +83,7 @@ pub(crate) trait Drain {
         let mut qstat = HashSet::<String>::new();
         let mut chunks = jobs.chunks_mut(queue.chunk_size());
         let mut out_of_jobs = false;
+        let mut to_remove = Vec::new();
         loop {
             // build more jobs if there is room
             while !out_of_jobs && cur_jobs.len() < queue.job_limit() {
@@ -101,7 +120,7 @@ pub(crate) trait Drain {
             let now = std::time::Instant::now();
             // collect output
             let mut finished = 0;
-            let mut to_remove = Vec::new();
+            to_remove.clear();
             for (i, job) in cur_jobs.iter_mut().enumerate() {
                 match job.program.read_output() {
                     Ok(res) => {
@@ -130,6 +149,7 @@ pub(crate) trait Drain {
                             dump.send(job_name.to_string());
                             dump.send(format!("{}.out", job_name));
                         }
+                        time.reading_ok += now.elapsed();
                     }
                     Err(e) => {
                         if e.is_error_in_output() {
@@ -142,32 +162,28 @@ pub(crate) trait Drain {
                             &mut slurm_jobs,
                             job,
                         );
+                        time.reading_err += now.elapsed();
                     }
                 }
             }
             // have to remove the highest index first so sort and reverse
+            let r = std::time::Instant::now();
             to_remove.sort();
             to_remove.reverse();
-            for i in to_remove {
-                cur_jobs.swap_remove(i);
+            for i in &to_remove {
+                cur_jobs.swap_remove(*i);
             }
-            let elapsed = now.elapsed();
+            time.removing += r.elapsed();
             if DEBUG {
                 eprintln!(
                     "finished {} jobs in {:.1} s",
                     finished,
-                    elapsed.as_millis() as f64 / 1000.0
+                    now.elapsed().as_millis() as f64 / 1000.0
                 );
             }
-            time.reading += elapsed;
             if cur_jobs.is_empty() && out_of_jobs {
                 dump.shutdown();
-                eprintln!(
-                    "{:.1} s reading, {:.1} s writing, {:.1} s sleeping",
-                    time.reading.as_millis() as f64 / 1000.0,
-                    time.writing.as_millis() as f64 / 1000.0,
-                    time.sleeping.as_millis() as f64 / 1000.0,
-                );
+                eprintln!("{}", time);
                 return Ok(());
             }
             if finished == 0 {
