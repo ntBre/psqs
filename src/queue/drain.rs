@@ -39,7 +39,7 @@ struct Time {
 
 impl Display for Time {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
+        write!(
             f,
             "{:.1} s reading ok, {:.1} s reading err, \
 			  {:.1} s writing, {:.1} s sleeping, {:.1} s removing",
@@ -49,6 +49,46 @@ impl Display for Time {
             self.sleeping.as_millis() as f64 / 1000.0,
             self.removing.as_millis() as f64 / 1000.0,
         )
+    }
+}
+
+/// a histogram covering the range [min, max) with `N` bins
+struct Histogram<const N: usize> {
+    min: f64,
+    cur_min: f64,
+    cur_max: f64,
+    total: f64,
+    denom: f64,
+    data: [usize; N],
+}
+
+impl<const N: usize> Histogram<N> {
+    fn new(min: f64, max: f64) -> Self {
+        Self {
+            min,
+            denom: max - min,
+            data: [0; N],
+            cur_min: 0.0,
+            cur_max: 0.0,
+            total: 0.0,
+        }
+    }
+
+    /// insert `val` into the appropriate bin in `self` and add it to the total.
+    /// if `val` is greater than `self.max`, don't perform the insert but add it
+    /// to the other statistics
+    fn insert(&mut self, val: f64) {
+        let idx = N as f64 * (val - self.min) / self.denom;
+        if let Some(elt) = self.data.get_mut(idx.floor() as usize) {
+            *elt += 1;
+        }
+        if val > self.cur_max {
+            self.cur_max = val;
+        }
+        if val < self.cur_min {
+            self.cur_min = val;
+        }
+        self.total += val;
     }
 }
 
@@ -77,14 +117,15 @@ pub(crate) trait Drain {
         let mut remaining = jobs.len();
 
         let dump = Dump::new();
-
         let mut time = Time::default();
+
+        // histogram for tracking job times
+        let mut job_time = Histogram::<100>::new(0.0, 10.0);
 
         let mut qstat = HashSet::<String>::new();
         let mut chunks = jobs.chunks_mut(queue.chunk_size());
         let mut out_of_jobs = false;
         let mut to_remove = Vec::new();
-        let mut job_time = 0.0;
         loop {
             let loop_time = std::time::Instant::now();
             // build more jobs if there is room
@@ -127,7 +168,7 @@ pub(crate) trait Drain {
                 match job.program.read_output() {
                     Ok(res) => {
                         to_remove.push(i);
-                        job_time += res.time;
+                        job_time.insert(res.time);
                         self.set_result(dst, *job, res);
                         for f in job.program.associated_files() {
                             dump.send(f);
@@ -186,7 +227,9 @@ pub(crate) trait Drain {
             if cur_jobs.is_empty() && out_of_jobs {
                 dump.shutdown();
                 eprintln!("{}", time);
-                eprintln!("total job time: {:.2} s", job_time);
+                eprintln!("total job time: {:.2} s", job_time.total);
+                eprintln!("max job time: {:.2} s", job_time.cur_max);
+                eprintln!("min job time: {:.2} s", job_time.cur_min);
                 return Ok(());
             }
             if finished == 0 {
