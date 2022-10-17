@@ -45,8 +45,23 @@ impl Pbs {
     }
 }
 
-// default impl for Mopac
-impl Submit<Mopac> for Pbs {}
+impl Submit<Mopac> for Pbs {
+    /// submit `filename` to the queue and return the jobid
+    fn submit(&self, filename: &str) -> String {
+        match Command::new(<Self as SubQueue<Mopac>>::submit_command(self))
+            .arg("-f")
+            .arg(filename)
+            .output()
+        {
+            Ok(s) => {
+                let raw =
+                    std::str::from_utf8(&s.stdout).unwrap().trim().to_string();
+                return raw.split_whitespace().last().unwrap_or("").to_string();
+            }
+            Err(e) => panic!("{e:?}"),
+        };
+    }
+}
 
 // Molpro 2022 submit script requires submission from the current directory, so
 // we have to override the default impl
