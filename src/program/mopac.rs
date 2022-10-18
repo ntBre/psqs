@@ -292,17 +292,16 @@ impl Mopac {
         // atomic labels
         let mut labels = Vec::new();
         // coordinates
-        let mut coords: Vec<Vec<f64>> = Vec::new();
+        let mut coords = Vec::new();
         let mut time = 0.0;
         for line in lines {
             if !guard.element && ELEMENT.is_match(&line) {
                 state = State::Labels;
                 guard.element = true;
             } else if state == State::Labels {
-                labels = line
-                    .split_whitespace()
+                line.split_ascii_whitespace()
                     .map(str::to_string)
-                    .collect::<Vec<_>>();
+                    .collect_into(&mut labels);
                 state = State::None;
             // line like HEAT_OF_FORMATION:KCAL/MOL=+0.97127947459164715838D+02
             } else if !guard.heat && HEAT.is_match(&line) {
@@ -331,10 +330,9 @@ impl Mopac {
             } else if state == State::Geom && CHARGE.is_match(&line) {
                 break;
             } else if state == State::Geom {
-                coords.push(
-                    line.split_whitespace()
-                        .map(|s| s.parse().unwrap())
-                        .collect(),
+                coords.extend(
+                    line.split_ascii_whitespace()
+                        .map(|s| s.parse::<f64>().unwrap()),
                 );
             }
         }
@@ -342,7 +340,7 @@ impl Mopac {
             None
         } else {
             let mut ret = Vec::new();
-            for (c, coord) in coords.iter().enumerate() {
+            for (c, coord) in coords.chunks_exact(3).enumerate() {
                 ret.push(Atom::new_from_label(
                     &labels[c], coord[0], coord[1], coord[2],
                 ));

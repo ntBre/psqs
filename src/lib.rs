@@ -1,4 +1,4 @@
-#![feature(test)]
+#![feature(test, iter_collect_into)]
 
 pub mod geom;
 pub mod program;
