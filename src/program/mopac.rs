@@ -275,16 +275,19 @@ impl Mopac {
             Labels,
             None,
         }
+        /// don't look for these after they've been found
         struct Guard {
             heat: bool,
             atom: bool,
             element: bool,
+            time: bool,
         }
         let mut state = State::None;
         let mut guard = Guard {
             heat: false,
             atom: false,
             element: false,
+            time: false,
         };
         // atomic labels
         let mut labels = Vec::new();
@@ -292,15 +295,16 @@ impl Mopac {
         let mut coords: Vec<Vec<f64>> = Vec::new();
         let mut time = 0.0;
         for line in lines {
+            if !guard.element && ELEMENT.is_match(&line) {
+                state = State::Labels;
+                guard.element = true;
+            } else if state == State::Labels {
+                labels = line
+                    .split_whitespace()
+                    .map(str::to_string)
+                    .collect::<Vec<_>>();
+                state = State::None;
             // line like HEAT_OF_FORMATION:KCAL/MOL=+0.97127947459164715838D+02
-            if TIME.is_match(&line) {
-                time = line
-                    .split('=')
-                    .nth(1)
-                    .unwrap()
-                    .replace('D', "E")
-                    .parse()
-                    .unwrap();
             } else if !guard.heat && HEAT.is_match(&line) {
                 let fields: Vec<&str> = line.trim().split('=').collect();
                 match fields[1].replace('D', "E").parse::<f64>() {
@@ -312,6 +316,15 @@ impl Mopac {
                     }
                 }
                 guard.heat = true;
+            } else if !guard.time && TIME.is_match(&line) {
+                time = line
+                    .split('=')
+                    .nth(1)
+                    .unwrap()
+                    .replace('D', "E")
+                    .parse()
+                    .unwrap();
+                guard.time = true;
             } else if !guard.atom && ATOM.is_match(&line) {
                 state = State::Geom;
                 guard.atom = true;
@@ -323,15 +336,6 @@ impl Mopac {
                         .map(|s| s.parse().unwrap())
                         .collect(),
                 );
-            } else if !guard.element && ELEMENT.is_match(&line) {
-                state = State::Labels;
-                guard.element = true;
-            } else if state == State::Labels {
-                labels = line
-                    .split_whitespace()
-                    .map(str::to_string)
-                    .collect::<Vec<_>>();
-                state = State::None;
             }
         }
         let cart_geom = if coords.is_empty() {
