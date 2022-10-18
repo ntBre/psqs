@@ -11,5 +11,12 @@ nalgebra = "0.31.1"
 regex = "1.5.5"
 symm = { path = "/home/brent/Projects/symm" }
 
+[dev-dependencies]
+criterion = "0.4.0"
+
 [[bin]]
 name = "read_out"
+
+[[bench]]
+name = "read_aux"
+harness = false

@@ -253,7 +253,7 @@ impl Mopac {
     }
 
     /// return the heat of formation from a MOPAC aux file in Hartrees
-    fn read_aux(&self) -> Result<ProgramResult, ProgramError> {
+    pub fn read_aux(&self) -> Result<ProgramResult, ProgramError> {
         let auxfile = format!("{}.aux", &self.filename);
         let f = if let Ok(file) = File::open(&auxfile) {
             file
