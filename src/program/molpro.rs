@@ -151,8 +151,8 @@ impl Program for Molpro {
         write!(file, "{}", body).expect("failed to write input file");
     }
 
-    fn read_output(&self) -> Result<ProgramResult, ProgramError> {
-        let outfile = format!("{}.out", &self.filename);
+    fn read_output(filename: &str) -> Result<ProgramResult, ProgramError> {
+        let outfile = format!("{}.out", &filename);
         let contents = match read_to_string(&outfile) {
             Ok(s) => s,
             Err(_) => {

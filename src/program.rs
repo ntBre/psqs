@@ -78,8 +78,8 @@ pub trait Program {
     /// write the input file to the name returned by `filename`
     fn write_input(&mut self, proc: Procedure);
 
-    /// read the output file found by replacing `self.extension()` with `.out`
-    fn read_output(&self) -> Result<ProgramResult, ProgramError>;
+    /// read the output file `filename`
+    fn read_output(filename: &str) -> Result<ProgramResult, ProgramError>;
 
     /// Return all the filenames associated with the Program for deletion when
     /// it finishes

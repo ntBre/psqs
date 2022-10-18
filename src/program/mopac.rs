@@ -140,12 +140,12 @@ Comment line 2
     /// reading the `.aux` file to extract the energy from there. This function
     /// panics if an error is found in the output file. If a non-fatal error
     /// occurs (file not found, not written to yet, etc) None is returned.
-    fn read_output(&self) -> Result<ProgramResult, ProgramError> {
-        let res = self.read_aux();
+    fn read_output(filename: &str) -> Result<ProgramResult, ProgramError> {
+        let res = Self::read_aux(filename);
         if res.is_ok() {
             return res;
         }
-        let outfile = format!("{}.out", &self.filename);
+        let outfile = format!("{}.out", &filename);
         let contents = match read_to_string(&outfile) {
             Ok(s) => s,
             Err(_) => {
@@ -157,7 +157,7 @@ Comment line 2
             static ref ERROR: Regex = Regex::new("(?i)error").unwrap();
         }
         if ERROR.is_match(&contents) {
-            return Err(ProgramError::ErrorInOutput(self.filename.clone()));
+            return Err(ProgramError::ErrorInOutput(filename.to_owned()));
         } else if PANIC.is_match(&contents) {
             panic!("panic requested in read_output");
         }
@@ -253,8 +253,8 @@ impl Mopac {
     }
 
     /// return the heat of formation from a MOPAC aux file in Hartrees
-    pub fn read_aux(&self) -> Result<ProgramResult, ProgramError> {
-        let auxfile = format!("{}.aux", &self.filename);
+    pub fn read_aux(filename: &str) -> Result<ProgramResult, ProgramError> {
+        let auxfile = format!("{}.aux", &filename);
         let f = if let Ok(file) = File::open(&auxfile) {
             file
         } else {

@@ -138,13 +138,7 @@ mod read_output {
 
     #[test]
     fn opt() {
-        let m = Molpro {
-            filename: "testfiles/molpro/opt".to_owned(),
-            template: Template::from(""),
-            charge: 0,
-            geom: Geom::Zmat(String::from("")),
-        };
-        let got = m.read_output().unwrap();
+        let got = Molpro::read_output("testfiles/molpro/opt").unwrap();
         let want = ProgramResult {
             energy: -76.369839620286,
             cart_geom: Some(vec![

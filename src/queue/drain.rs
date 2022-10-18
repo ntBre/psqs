@@ -185,9 +185,10 @@ pub(crate) trait Drain {
             // collect output
             let mut finished = 0;
             to_remove.clear();
+            // use rayon::prelude::*;
             for (i, job) in cur_jobs.iter_mut().enumerate() {
                 let now = std::time::Instant::now();
-                match job.program.read_output() {
+                match P::read_output(&job.program.outfile()) {
                     Ok(res) => {
                         to_remove.push(i);
                         job_time.insert(res.time);

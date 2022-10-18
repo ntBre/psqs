@@ -105,28 +105,12 @@ extern crate test;
 use test::Bencher;
 #[bench]
 fn bench_read_output(b: &mut Bencher) {
-    // success
-    let mp = Mopac::new_full(
-        String::from("testfiles/job"),
-        None,
-        Rc::new(Geom::Xyz(Vec::new())),
-        0,
-        Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
-    );
-    b.iter(|| mp.read_output());
+    b.iter(|| Mopac::read_output("testfiles/job"));
 }
 
 #[bench]
 fn bench_read_aux(b: &mut Bencher) {
-    // success
-    let mp = Mopac::new_full(
-        String::from("testfiles/job"),
-        None,
-        Rc::new(Geom::Xyz(Vec::new())),
-        0,
-        Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
-    );
-    b.iter(|| mp.read_aux());
+    b.iter(|| Mopac::read_aux("testfiles/job"));
 }
 
 #[bench]
@@ -144,15 +128,7 @@ fn bench_geom_string(b: &mut Bencher) {
 
 #[test]
 fn test_read_output() {
-    // success
-    let mp = Mopac::new_full(
-        String::from("testfiles/job"),
-        None,
-        Rc::new(Geom::Xyz(Vec::new())),
-        0,
-        Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
-    );
-    let res = mp.read_output().unwrap();
+    let res = Mopac::read_output("testfiles/job").unwrap();
     let got = res.energy;
     let want = 9.712_794_745_916_472e1 / KCALHT;
     assert!((got - want).abs() < 1e-20);
@@ -160,14 +136,7 @@ fn test_read_output() {
     assert_eq!(res.time, 0.015625);
 
     // opt success
-    let mp = Mopac::new_full(
-        String::from("testfiles/opt"),
-        None,
-        Rc::new(Geom::Xyz(Vec::new())),
-        1,
-        Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
-    );
-    let got = mp.read_output().unwrap().cart_geom;
+    let got = Mopac::read_output("testfiles/opt").unwrap().cart_geom;
     let want = vec![
         Atom::new_from_label(
             "C",
@@ -205,26 +174,12 @@ fn test_read_output() {
     // failure (no termination message) in output - now catches noaux error
     // instead
     let f = String::from("testfiles/nojob");
-    let mp = Mopac::new_full(
-        f.clone(),
-        None,
-        Rc::new(Geom::Xyz(Vec::new())),
-        0,
-        Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
-    );
-    let got = mp.read_output();
+    let got = Mopac::read_output(&f);
     assert_eq!(got.err().unwrap(), ProgramError::FileNotFound(f + ".aux"));
 
     // failure in aux
     let f = String::from("testfiles/noaux");
-    let mp = Mopac::new_full(
-        f.clone(),
-        None,
-        Rc::new(Geom::Xyz(Vec::new())),
-        0,
-        Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
-    );
-    let got = mp.read_output();
+    let got = Mopac::read_output(&f);
     assert_eq!(got.err().unwrap(), ProgramError::FileNotFound(f + ".aux"));
 }
 
