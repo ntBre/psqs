@@ -263,11 +263,11 @@ impl Mopac {
         let lines = BufReader::new(f).lines().flatten();
         let mut energy = None;
         lazy_static! {
-            static ref HEAT: Regex = Regex::new("HEAT_OF_FORMATION").unwrap();
-            static ref ATOM: Regex = Regex::new("ATOM_X_OPT").unwrap();
-            static ref ELEMENT: Regex = Regex::new("ATOM_EL").unwrap();
-            static ref CHARGE: Regex = Regex::new("ATOM_CHARGES").unwrap();
-            static ref TIME: Regex = Regex::new("CPU_TIME:SEC=").unwrap();
+            static ref HEAT: Regex = Regex::new("^ HEAT_OF_FORMATION").unwrap();
+            static ref ATOM: Regex = Regex::new("^ ATOM_X_OPT").unwrap();
+            static ref ELEMENT: Regex = Regex::new("^ ATOM_EL").unwrap();
+            static ref CHARGE: Regex = Regex::new("^ ATOM_CHARGES").unwrap();
+            static ref TIME: Regex = Regex::new("^ CPU_TIME:SEC=").unwrap();
         }
         #[derive(PartialEq)]
         enum State {
