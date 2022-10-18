@@ -31,8 +31,7 @@ mod dump;
 #[derive(Default)]
 struct Time {
     writing: Duration,
-    reading_ok: Duration,
-    reading_err: Duration,
+    reading: Duration,
     sleeping: Duration,
     removing: Duration,
 }
@@ -41,10 +40,9 @@ impl Display for Time {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{:.1} s reading ok, {:.1} s reading err, \
-			  {:.1} s writing, {:.1} s sleeping, {:.1} s removing",
-            self.reading_ok.as_millis() as f64 / 1000.0,
-            self.reading_err.as_millis() as f64 / 1000.0,
+            "{:.1} s reading ok, {:.1} s writing, {:.1} s sleeping, \
+	     {:.1} s removing",
+            self.reading.as_millis() as f64 / 1000.0,
             self.writing.as_millis() as f64 / 1000.0,
             self.sleeping.as_millis() as f64 / 1000.0,
             self.removing.as_millis() as f64 / 1000.0,
@@ -185,10 +183,16 @@ pub(crate) trait Drain {
             // collect output
             let mut finished = 0;
             to_remove.clear();
-            // use rayon::prelude::*;
-            for (i, job) in cur_jobs.iter_mut().enumerate() {
-                let now = std::time::Instant::now();
-                match P::read_output(&job.program.outfile()) {
+            let now = std::time::Instant::now();
+            let outfiles: Vec<_> =
+                cur_jobs.iter().map(|job| job.program.filename()).collect();
+            use rayon::prelude::*;
+            let results: Vec<_> =
+                outfiles.par_iter().map(|out| P::read_output(out)).collect();
+            time.reading += now.elapsed();
+            for (i, (job, res)) in cur_jobs.iter_mut().zip(results).enumerate()
+            {
+                match res {
                     Ok(res) => {
                         to_remove.push(i);
                         job_time.insert(res.time);
@@ -215,7 +219,6 @@ pub(crate) trait Drain {
                             dump.send(job_name.to_string());
                             dump.send(format!("{}.out", job_name));
                         }
-                        time.reading_ok += now.elapsed();
                     }
                     Err(e) => {
                         if e.is_error_in_output() {
@@ -228,7 +231,6 @@ pub(crate) trait Drain {
                             &mut slurm_jobs,
                             job,
                         );
-                        time.reading_err += now.elapsed();
                     }
                 }
             }
