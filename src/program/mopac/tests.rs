@@ -202,7 +202,8 @@ fn test_read_output() {
     ];
     assert_eq!(got, Some(want));
 
-    // failure in output
+    // failure (no termination message) in output - now catches noaux error
+    // instead
     let f = String::from("testfiles/nojob");
     let mp = Mopac::new_full(
         f.clone(),
@@ -212,10 +213,7 @@ fn test_read_output() {
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
     );
     let got = mp.read_output();
-    assert_eq!(
-        got.err().unwrap(),
-        ProgramError::EnergyNotFound(f + ".out - end")
-    );
+    assert_eq!(got.err().unwrap(), ProgramError::FileNotFound(f + ".aux"));
 
     // failure in aux
     let f = String::from("testfiles/noaux");

@@ -141,6 +141,10 @@ Comment line 2
     /// panics if an error is found in the output file. If a non-fatal error
     /// occurs (file not found, not written to yet, etc) None is returned.
     fn read_output(&self) -> Result<ProgramResult, ProgramError> {
+        let res = self.read_aux();
+        if res.is_ok() {
+            return res;
+        }
         let outfile = format!("{}.out", &self.filename);
         let contents = match read_to_string(&outfile) {
             Ok(s) => s,
@@ -151,16 +155,13 @@ Comment line 2
         lazy_static! {
             static ref PANIC: Regex = Regex::new("(?i)panic").unwrap();
             static ref ERROR: Regex = Regex::new("(?i)error").unwrap();
-            static ref DONE: Regex = Regex::new(" == MOPAC DONE ==").unwrap();
         }
         if ERROR.is_match(&contents) {
             return Err(ProgramError::ErrorInOutput(self.filename.clone()));
-        } else if DONE.is_match(&contents) {
-            return self.read_aux();
         } else if PANIC.is_match(&contents) {
             panic!("panic requested in read_output");
         }
-        Err(ProgramError::EnergyNotFound(outfile + " - end"))
+        res
     }
 
     fn associated_files(&self) -> Vec<String> {
