@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
+    iter::zip,
     path::Path,
     process::Command,
     str,
@@ -116,14 +117,23 @@ where
         let queue_file =
             format!("{}/main{}.{}", dir, chunk_num, Self::SCRIPT_EXT);
         let jl = jobs.len();
+        let mut contents = Vec::with_capacity(jl);
         let mut filenames = Vec::with_capacity(jl);
+        let mut real_files = Vec::with_capacity(jl);
         for job in &mut *jobs {
-            job.program.write_input(proc);
+            contents.push(job.program.build_input(proc));
             job.pbs_file = queue_file.to_string();
             filenames.push(job.program.filename());
+            real_files.push(job.program.infile());
         }
         slurm_jobs.insert(queue_file.clone(), jl);
+
         self.write_submit_script(&filenames, &queue_file);
+        let pairs = zip(contents, real_files);
+        use rayon::prelude::*;
+        pairs.par_bridge().for_each(|(contents, filename)| {
+            P::write_infile(contents, &filename).unwrap();
+        });
         // run jobs
         let job_id = self.submit(&queue_file);
         for mut job in jobs {
@@ -143,8 +153,8 @@ where
         if !qstat.contains(&job.job_id) {
             let time = job.modtime();
             if time > job.modtime {
-                // file has been updated since we last looked at it, so need to look
-                // again
+                // file has been updated since we last looked at it, so need to
+                // look again
                 job.modtime = time;
                 return;
             }
