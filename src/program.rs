@@ -60,8 +60,11 @@ pub trait Program {
 
     /// return the output of `self.filename()` with ".out" appended
     fn outfile(&self) -> String {
-        format!("{}.out", self.filename())
+        self.filename() + ".out"
     }
+
+    /// return the input file associated with `self`
+    fn infile(&self) -> String;
 
     /// set `filename`
     fn set_filename(&mut self, filename: &str);

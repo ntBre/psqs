@@ -181,6 +181,10 @@ Comment line 2
     fn charge(&self) -> isize {
         self.charge
     }
+
+    fn infile(&self) -> String {
+        self.filename() + ".mop"
+    }
 }
 
 impl Mopac {

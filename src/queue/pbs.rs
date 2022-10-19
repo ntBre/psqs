@@ -34,8 +34,10 @@ impl Pbs {
             dir,
         }
     }
+}
 
-    pub fn default() -> Self {
+impl Default for Pbs {
+    fn default() -> Self {
         Self {
             chunk_size: 128,
             job_limit: 1600,

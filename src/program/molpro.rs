@@ -232,7 +232,10 @@ impl Program for Molpro {
     }
 
     fn associated_files(&self) -> Vec<String> {
-        let fname = self.filename();
-        vec![format!("{}.inp", fname), format!("{}.out", fname)]
+        vec![self.infile(), self.outfile()]
+    }
+
+    fn infile(&self) -> String {
+        self.filename() + ".inp"
     }
 }
