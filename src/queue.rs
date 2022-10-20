@@ -70,7 +70,7 @@ where
 
 pub trait Queue<P>: SubQueue<P> + Submit<P>
 where
-    P: Program + Clone,
+    P: Program + Clone + Send,
 {
     fn write_submit_script(&self, infiles: &[String], filename: &str);
 
@@ -116,12 +116,15 @@ where
         let queue_file =
             format!("{}/main{}.{}", dir, chunk_num, Self::SCRIPT_EXT);
         let jl = jobs.len();
-        let mut filenames = Vec::with_capacity(jl);
-        for job in &mut *jobs {
-            job.program.write_input(proc);
-            job.pbs_file = queue_file.to_string();
-            filenames.push(job.program.filename());
-        }
+        use rayon::prelude::*;
+        let filenames: Vec<_> = jobs
+            .par_iter_mut()
+            .map(|job| {
+                job.program.write_input(proc);
+                job.pbs_file = queue_file.to_string();
+                job.program.filename()
+            })
+            .collect();
         slurm_jobs.insert(queue_file.clone(), jl);
         self.write_submit_script(&filenames, &queue_file);
         // run jobs

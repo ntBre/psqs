@@ -1,6 +1,7 @@
 use core::time;
 use std::{
     collections::{HashMap, HashSet},
+    marker::Send,
     thread,
 };
 
@@ -40,7 +41,7 @@ pub(crate) trait Drain {
         res: ProgramResult,
     );
 
-    fn drain<P: Program + Clone, Q: Queue<P> + ?Sized>(
+    fn drain<P: Program + Clone + Send, Q: Queue<P> + ?Sized>(
         &self,
         dir: &str,
         queue: &Q,

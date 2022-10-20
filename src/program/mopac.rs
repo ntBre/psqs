@@ -8,8 +8,6 @@ use std::collections::hash_map::DefaultHasher;
 use std::fs::{read_to_string, File};
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Write};
-use std::rc::Rc;
-
 use super::{Job, Procedure, ProgramResult, Template};
 
 /// kcal/mol per hartree
@@ -32,12 +30,12 @@ pub struct Mopac {
     /// keyword. These are wrapped in an Rc to allow the same set of parameters
     /// to be shared between calculations without an expensive `clone`
     /// operation.
-    pub params: Option<Rc<Params>>,
+    pub params: Option<Params>,
 
     /// The initial geometry for the calculation. These are also wrapped in an
     /// Rc to avoid allocating multiple copies for calculations with the same
     /// geometry.
-    pub geom: Rc<Geom>,
+    pub geom: Geom,
 
     /// the file in which to store the parameters
     pub param_file: Option<String>,
@@ -63,7 +61,7 @@ impl Program for Mopac {
     ) -> Self {
         Self {
             filename,
-            geom: Rc::new(geom),
+            geom,
             param_file: None,
             charge,
             template,
@@ -190,8 +188,8 @@ Comment line 2
 impl Mopac {
     pub fn new_full(
         filename: String,
-        params: Option<Rc<Params>>,
-        geom: Rc<Geom>,
+        params: Option<Params>,
+        geom: Geom,
         charge: isize,
         template: Template,
     ) -> Self {
@@ -210,7 +208,7 @@ impl Mopac {
     /// files yet
     #[allow(clippy::too_many_arguments)]
     pub fn build_jobs(
-        moles: &Vec<Rc<Geom>>,
+        moles: &Vec<Geom>,
         params: Option<&Params>,
         dir: &'static str,
         start_index: usize,
@@ -222,14 +220,13 @@ impl Mopac {
         let mut count: usize = start_index;
         let mut job_num = job_num;
         let mut jobs = Vec::new();
-        let params = params.map(|p| Rc::new(p.clone()));
         for mol in moles {
             let filename = format!("{dir}/job.{:08}", job_num);
             job_num += 1;
             let mut job = Job::new(
                 Mopac::new_full(
                     filename,
-                    params.clone(),
+                    params.cloned(),
                     mol.clone(),
                     charge,
                     tmpl.clone(),
