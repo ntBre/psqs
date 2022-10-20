@@ -9,7 +9,6 @@ use psqs::{
 pub fn read_aux(c: &mut Criterion) {
     let mp = Mopac::new_full(
         String::from("testfiles/job"),
-        None,
         Rc::new(Geom::Xyz(Vec::new())),
         0,
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),

@@ -99,7 +99,7 @@ mod write_input {
 
     #[test]
     fn opt_opt() {
-        let mut m = test_molpro(Type::Opt);
+        let m = test_molpro(Type::Opt);
         m.write_input(Procedure::Opt);
 
         check!("testfiles/molpro/opt_opt.want");
@@ -107,7 +107,7 @@ mod write_input {
 
     #[test]
     fn opt_single() {
-        let mut m = test_molpro(Type::Opt);
+        let m = test_molpro(Type::Opt);
         m.write_input(Procedure::SinglePt);
 
         check!("testfiles/molpro/opt_single.want");
@@ -115,7 +115,7 @@ mod write_input {
 
     #[test]
     fn single_opt() {
-        let mut m = test_molpro(Type::Single);
+        let m = test_molpro(Type::Single);
         m.write_input(Procedure::Opt);
 
         check!("testfiles/molpro/opt_opt.want");
@@ -123,7 +123,7 @@ mod write_input {
 
     #[test]
     fn single_single() {
-        let mut m = test_molpro(Type::Single);
+        let m = test_molpro(Type::Single);
         m.write_input(Procedure::SinglePt);
 
         check!("testfiles/molpro/opt_single.want");

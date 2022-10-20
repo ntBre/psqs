@@ -4,9 +4,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use symm::Atom;
 
-use std::collections::hash_map::DefaultHasher;
 use std::fs::{read_to_string, File};
-use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Write};
 use std::rc::Rc;
 
@@ -27,12 +25,6 @@ mod tests;
 #[derive(Debug, Clone)]
 pub struct Mopac {
     pub filename: String,
-
-    /// The semi-empirical parameters to use in the calculation via the EXTERNAL
-    /// keyword. These are wrapped in an Rc to allow the same set of parameters
-    /// to be shared between calculations without an expensive `clone`
-    /// operation.
-    pub params: Option<Rc<Params>>,
 
     /// The initial geometry for the calculation. These are also wrapped in an
     /// Rc to avoid allocating multiple copies for calculations with the same
@@ -67,7 +59,6 @@ impl Program for Mopac {
             param_file: None,
             charge,
             template,
-            params: None,
             param_dir: None,
         }
     }
@@ -91,7 +82,7 @@ impl Program for Mopac {
     /// Writes the parameters of self to a parameter file, then writes the MOPAC
     /// input file with external=paramfile. Also update self.paramfile to point
     /// to the generated name for the parameter file
-    fn write_input(&mut self, proc: Procedure) {
+    fn write_input(&self, proc: Procedure) {
         use std::fmt::Write;
         // header should look like
         //   scfcrt=1.D-21 aux(precision=14) PM6
@@ -106,15 +97,6 @@ impl Program for Mopac {
             Procedure::SinglePt => {
                 header.push_str(" 1SCF");
             }
-        }
-        if let Some(params) = &self.params {
-            let mut s = DefaultHasher::new();
-            self.filename.hash(&mut s);
-            let param_file =
-                format!("{}/{}", self.param_dir.as_ref().unwrap(), s.finish());
-            Self::write_params(params, &param_file);
-            write!(header, " external={}", param_file).unwrap();
-            self.param_file = Some(param_file);
         }
         if self.geom.is_xyz() {
             header.push_str(" XYZ");
@@ -190,14 +172,12 @@ Comment line 2
 impl Mopac {
     pub fn new_full(
         filename: String,
-        params: Option<Rc<Params>>,
         geom: Rc<Geom>,
         charge: isize,
         template: Template,
     ) -> Self {
         Self {
             filename,
-            params,
             geom,
             param_file: None,
             param_dir: Some("tmparam".to_string()),
@@ -211,7 +191,6 @@ impl Mopac {
     #[allow(clippy::too_many_arguments)]
     pub fn build_jobs(
         moles: &Vec<Rc<Geom>>,
-        params: Option<&Params>,
         dir: &'static str,
         start_index: usize,
         coeff: f64,
@@ -222,18 +201,11 @@ impl Mopac {
         let mut count: usize = start_index;
         let mut job_num = job_num;
         let mut jobs = Vec::new();
-        let params = params.map(|p| Rc::new(p.clone()));
         for mol in moles {
             let filename = format!("{dir}/job.{:08}", job_num);
             job_num += 1;
             let mut job = Job::new(
-                Mopac::new_full(
-                    filename,
-                    params.clone(),
-                    mol.clone(),
-                    charge,
-                    tmpl.clone(),
-                ),
+                Mopac::new_full(filename, mol.clone(), charge, tmpl.clone()),
                 count,
             );
             job.coeff = coeff;

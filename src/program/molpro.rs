@@ -84,7 +84,7 @@ impl Program for Molpro {
     /// The missing closing brace around the geometry allows for easier handling
     /// of ZMAT inputs since `write_input` can insert its own closing brace
     /// between the ZMAT and parameter values.
-    fn write_input(&mut self, proc: Procedure) {
+    fn write_input(&self, proc: Procedure) {
         use std::io::Write;
         let mut body = self.template().clone().header;
         // skip optgrad but accept optg at the end of a line
