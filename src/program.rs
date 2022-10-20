@@ -78,24 +78,8 @@ pub trait Program {
     /// molecular charge
     fn charge(&self) -> isize;
 
-    /// build the contents of the input file as a String, but don't write it
-    /// anywhere yet
-    fn build_input(&mut self, proc: Procedure) -> String;
-
-    /// write the `contents` of the input file to `filename`
-    fn write_infile(contents: String, filename: &str) -> std::io::Result<()> {
-        use std::io::Write;
-        let mut file = match std::fs::File::create(filename) {
-            Ok(f) => f,
-            Err(e) => panic!("failed to create {filename} with {e}"),
-        };
-        write!(file, "{contents}")
-    }
-
-    fn write_input(&mut self, proc: Procedure) {
-        let contents = self.build_input(proc);
-        Self::write_infile(contents, &self.infile()).unwrap();
-    }
+    /// write the input file to the name returned by `filename`
+    fn write_input(&mut self, proc: Procedure);
 
     /// read the output file `filename`
     fn read_output(filename: &str) -> Result<ProgramResult, ProgramError>;

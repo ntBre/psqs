@@ -91,7 +91,7 @@ impl Program for Mopac {
     /// Writes the parameters of self to a parameter file, then writes the MOPAC
     /// input file with external=paramfile. Also update self.paramfile to point
     /// to the generated name for the parameter file
-    fn build_input(&mut self, proc: Procedure) -> String {
+    fn write_input(&mut self, proc: Procedure) {
         use std::fmt::Write;
         // header should look like
         //   scfcrt=1.D-21 aux(precision=14) PM6
@@ -120,16 +120,20 @@ impl Program for Mopac {
             header.push_str(" XYZ");
         }
         let geom = geom_string(&self.geom);
+        let filename = format!("{}.mop", self.filename);
+        let mut file = match File::create(&filename) {
+            Ok(f) => f,
+            Err(e) => panic!("failed to create {filename} with {e}"),
+        };
         write!(
-            header,
-            "
+            file,
+            "{header}
 Comment line 1
 Comment line 2
 {geom}
 ",
         )
-        .unwrap();
-        header
+        .expect("failed to write input file");
     }
 
     /// Reads a MOPAC output file. If normal termination occurs, also try

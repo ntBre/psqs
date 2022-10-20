@@ -1,4 +1,4 @@
-use std::fs::read_to_string;
+use std::fs::{read_to_string, File};
 
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -84,7 +84,8 @@ impl Program for Molpro {
     /// The missing closing brace around the geometry allows for easier handling
     /// of ZMAT inputs since `write_input` can insert its own closing brace
     /// between the ZMAT and parameter values.
-    fn build_input(&mut self, proc: Procedure) -> String {
+    fn write_input(&mut self, proc: Procedure) {
+        use std::io::Write;
         let mut body = self.template().clone().header;
         // skip optgrad but accept optg at the end of a line
         lazy_static! {
@@ -141,7 +142,13 @@ impl Program for Molpro {
         body = CHARGE
             .replace(&body, &format!("{}", self.charge))
             .to_string();
-        body
+
+        let filename = format!("{}.{}", self.filename, self.extension());
+        let mut file = match File::create(&filename) {
+            Ok(f) => f,
+            Err(e) => panic!("failed to create {filename} with {e}"),
+        };
+        write!(file, "{}", body).expect("failed to write input file");
     }
 
     fn read_output(filename: &str) -> Result<ProgramResult, ProgramError> {
