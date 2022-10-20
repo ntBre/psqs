@@ -1,9 +1,7 @@
 use core::time;
 use std::{
     collections::{HashMap, HashSet},
-    fmt::Display,
     thread,
-    time::Duration,
 };
 
 use crate::{
@@ -27,90 +25,8 @@ macro_rules! time {
 }
 
 mod dump;
-
-#[derive(Default)]
-struct Time {
-    writing: Duration,
-    reading: Duration,
-    sleeping: Duration,
-    removing: Duration,
-}
-
-impl Display for Time {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{:.1} s reading ok, {:.1} s writing, {:.1} s sleeping, \
-	     {:.1} s removing",
-            self.reading.as_millis() as f64 / 1000.0,
-            self.writing.as_millis() as f64 / 1000.0,
-            self.sleeping.as_millis() as f64 / 1000.0,
-            self.removing.as_millis() as f64 / 1000.0,
-        )
-    }
-}
-
-/// a histogram covering the range [min, max) with `N` bins
-struct Histogram<const N: usize> {
-    min: f64,
-    cur_min: f64,
-    cur_max: f64,
-    total: f64,
-    denom: f64,
-    data: [usize; N],
-}
-
-impl<const N: usize> Histogram<N> {
-    fn new(min: f64, max: f64) -> Self {
-        Self {
-            min,
-            denom: max - min,
-            data: [0; N],
-            cur_min: 0.0,
-            cur_max: 0.0,
-            total: 0.0,
-        }
-    }
-
-    /// insert `val` into the appropriate bin in `self` and add it to the total.
-    /// if `val` is greater than `self.max`, don't perform the insert but add it
-    /// to the other statistics
-    fn insert(&mut self, val: f64) {
-        let idx = N as f64 * (val - self.min) / self.denom;
-        if let Some(elt) = self.data.get_mut(idx.floor() as usize) {
-            *elt += 1;
-        }
-        if val > self.cur_max {
-            self.cur_max = val;
-        }
-        if val < self.cur_min {
-            self.cur_min = val;
-        }
-        self.total += val;
-    }
-
-    /// return the count of elements in `self`
-    fn count(&self) -> usize {
-        self.data.iter().sum()
-    }
-
-    /// return the average of `self`
-    fn average(&self) -> f64 {
-        self.total / self.count() as f64
-    }
-}
-
-impl<const N: usize> Display for Histogram<N> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let bin_width = self.denom / N as f64;
-        for (i, v) in self.data.iter().enumerate() {
-            if *v > 0 {
-                writeln!(f, "{:5.2}{:5}", i as f64 * bin_width, v)?;
-            }
-        }
-        Ok(())
-    }
-}
+mod histogram;
+mod timer;
 
 pub(crate) trait Drain {
     type Item;
@@ -137,10 +53,10 @@ pub(crate) trait Drain {
         let mut remaining = jobs.len();
 
         let dump = Dump::new();
-        let mut time = Time::default();
+        let mut time = timer::Timer::default();
 
         // histogram for tracking job times
-        let mut job_time = Histogram::<100>::new(0.0, 10.0);
+        let mut job_time = histogram::Histogram::<100>::new(0.0, 10.0);
 
         let mut qstat = HashSet::<String>::new();
         let mut chunks = jobs.chunks_mut(queue.chunk_size());
