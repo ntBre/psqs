@@ -9,32 +9,6 @@ use crate::queue::{self, Queue, SubQueue, Submit};
 use super::*;
 
 fn test_mopac() -> Mopac {
-    Mopac::new_full(
-        String::from("/tmp/test"),
-        Rc::new(Geom::Xyz(Vec::new())),
-        0,
-        Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
-    )
-}
-
-#[test]
-fn test_write_input() {
-    let mut tm = test_mopac();
-    tm.param_dir = Some("/tmp".to_string());
-    tm.write_input(Procedure::SinglePt);
-    let got = fs::read_to_string("/tmp/test.mop").expect("file not found");
-    let want = "scfcrt=1.D-21 aux(precision=14) PM6 A0 charge=0 1SCF XYZ
-Comment line 1
-Comment line 2
-
-"
-    .to_string();
-    assert_eq!(got, want);
-    fs::remove_file("/tmp/test.mop").unwrap();
-}
-
-#[test]
-fn test_write_params() {
     let names = vec![
         "USS", "ZS", "BETAS", "GSS", "USS", "UPP", "ZS", "ZP", "BETAS",
         "BETAP", "GSS", "GPP", "GSP", "GP2", "HSP",
@@ -51,12 +25,61 @@ fn test_write_params() {
         -7.471929000000, 13.335519000000, 10.778326000000,
         11.528134000000, 9.486212000000, 0.717322000000,
     ];
-    let params = Params::from(
-        names.iter().map(|s| s.to_string()).collect(),
-        atoms.iter().map(|s| s.to_string()).collect(),
-        values,
+    Mopac::new_full(
+        String::from("/tmp/test"),
+        Some(Rc::new(Params::from(
+            names.iter().map(|s| s.to_string()).collect(),
+            atoms.iter().map(|s| s.to_string()).collect(),
+            values,
+        ))),
+        Rc::new(Geom::Xyz(Vec::new())),
+        0,
+        Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
+    )
+}
+
+#[test]
+fn test_write_input() {
+    let mut tm = Mopac {
+        params: None,
+        ..test_mopac()
+    };
+    tm.param_dir = Some("/tmp".to_string());
+    tm.write_input(Procedure::SinglePt);
+    let got = fs::read_to_string("/tmp/test.mop").expect("file not found");
+    let want = "scfcrt=1.D-21 aux(precision=14) PM6 A0 charge=0 1SCF XYZ
+Comment line 1
+Comment line 2
+
+"
+    .to_string();
+    assert_eq!(got, want);
+    fs::remove_file("/tmp/test.mop").unwrap();
+}
+
+#[test]
+fn test_write_input_with_params() {
+    let mut tm = test_mopac();
+    tm.param_dir = Some("/tmp".to_string());
+    tm.write_input(Procedure::SinglePt);
+    let got = fs::read_to_string("/tmp/test.mop").expect("file not found");
+    let want = format!(
+        "scfcrt=1.D-21 aux(precision=14) PM6 A0 charge=0 1SCF \
+	     external={} XYZ
+Comment line 1
+Comment line 2
+
+",
+        tm.param_file.unwrap(),
     );
-    Mopac::write_params(&params, &String::from("/tmp/params.dat"));
+    assert_eq!(got, want);
+    fs::remove_file("/tmp/test.mop").unwrap();
+}
+
+#[test]
+fn test_write_params() {
+    let tm = test_mopac();
+    Mopac::write_params(&tm.params.unwrap(), &String::from("/tmp/params.dat"));
     let got = fs::read_to_string("/tmp/params.dat").expect("file not found");
     let want = "USS H -11.246958000000
 ZS H 1.268641000000

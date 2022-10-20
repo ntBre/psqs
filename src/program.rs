@@ -79,7 +79,7 @@ pub trait Program {
     fn charge(&self) -> isize;
 
     /// write the input file to the name returned by `filename`
-    fn write_input(&self, proc: Procedure);
+    fn write_input(&mut self, proc: Procedure);
 
     /// read the output file `filename`
     fn read_output(filename: &str) -> Result<ProgramResult, ProgramError>;
