@@ -31,8 +31,6 @@ fn energy_line() -> &'static Regex {
     unsafe { ENERGY.assume_init_ref() }
 }
 
-lazy_static! {}
-
 #[derive(Clone)]
 pub struct Molpro {
     filename: String,
