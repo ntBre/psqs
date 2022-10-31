@@ -131,11 +131,7 @@ mod write_input {
 }
 
 mod read_output {
-    use crate::program::{
-        molpro::{self, ENERGY},
-        Program, ProgramResult,
-    };
-    use regex::Regex;
+    use crate::program::{Program, ProgramResult};
     use symm::Atom;
 
     use super::*;
@@ -174,14 +170,7 @@ mod read_output {
 
     #[test]
     fn dzccr() {
-        // can't just use the safe API here because it only gets initialized
-        // once, and then it either won't work if this doesn't run first or it
-        // will break the others
-        molpro::set_energy_line(None);
-        let e = unsafe { ENERGY.assume_init_read() };
-        unsafe { ENERGY.write(Regex::new(r"^ CCCRE\s+=").unwrap()) };
         let got = Molpro::read_output("testfiles/molpro/dzccr");
-        unsafe { ENERGY.write(e) };
         let got = got.unwrap_or_else(|e| panic!("{e:#?}"));
         let want = ProgramResult {
             energy: -76.470698498340,
