@@ -27,12 +27,12 @@ fn test_mopac() -> Mopac {
     ];
     Mopac::new_full(
         String::from("/tmp/test"),
-        Some(Rc::new(Params::from(
+        Some(Params::from(
             names.iter().map(|s| s.to_string()).collect(),
             atoms.iter().map(|s| s.to_string()).collect(),
             values,
-        ))),
-        Rc::new(Geom::Xyz(Vec::new())),
+        )),
+        Geom::Xyz(Vec::new()),
         0,
         Template::from("scfcrt=1.D-21 aux(precision=14) PM6 A0"),
     )

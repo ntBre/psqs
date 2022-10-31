@@ -253,7 +253,8 @@ impl Mopac {
         write!(file, "{}", body).expect("failed to write params file");
     }
 
-    /// return the heat of formation from a MOPAC aux file in Hartrees
+    /// return the heat of formation from a MOPAC aux file in Hartrees.
+    /// `filename` should not include the .aux extension
     pub fn read_aux(filename: &str) -> Result<ProgramResult, ProgramError> {
         let auxfile = format!("{}.aux", &filename);
         let f = if let Ok(file) = File::open(&auxfile) {
