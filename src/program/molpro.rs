@@ -1,4 +1,8 @@
-use std::fs::{read_to_string, File};
+use std::{
+    fs::{read_to_string, File},
+    mem::MaybeUninit,
+    sync::Once,
+};
 
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -9,6 +13,25 @@ use super::{Procedure, Program, ProgramError, ProgramResult, Template};
 
 #[cfg(test)]
 mod tests;
+
+static START: Once = Once::new();
+static mut ENERGY: MaybeUninit<Regex> = MaybeUninit::uninit();
+/// this can be called to initialize the regular expression used to find the
+/// energy in the output files. otherwise it will be called in `read_output` and
+/// initialized to the default value of `"energy= "`.
+pub fn set_energy_line(re: Option<Regex>) {
+    unsafe {
+        START.call_once(|| {
+            ENERGY.write(re.unwrap_or_else(|| Regex::new("energy= ").unwrap()));
+        });
+    }
+}
+
+fn energy_line() -> &'static Regex {
+    unsafe { ENERGY.assume_init_ref() }
+}
+
+lazy_static! {}
 
 #[derive(Clone)]
 pub struct Molpro {
@@ -152,6 +175,7 @@ impl Program for Molpro {
     }
 
     fn read_output(filename: &str) -> Result<ProgramResult, ProgramError> {
+        set_energy_line(None);
         let outfile = format!("{}.out", &filename);
         let contents = match read_to_string(&outfile) {
             Ok(s) => s,
@@ -162,11 +186,9 @@ impl Program for Molpro {
         lazy_static! {
             static ref PANIC: Regex = Regex::new("(?i)panic").unwrap();
             static ref ERROR: Regex = Regex::new("(?i)error").unwrap();
-        // TODO make this able to be passed in
-        static ref ENERGY: Regex = Regex::new("energy= ").unwrap();
-        static ref GEOM: Regex = Regex::new("Current geometry").unwrap();
-        static ref BLANK: Regex = Regex::new(r"^\s*$").unwrap();
-        static ref TIME: Regex = Regex::new(r"^ REAL TIME").unwrap();
+            static ref GEOM: Regex = Regex::new("Current geometry").unwrap();
+            static ref BLANK: Regex = Regex::new(r"^\s*$").unwrap();
+            static ref TIME: Regex = Regex::new(r"^ REAL TIME").unwrap();
         }
         if PANIC.is_match(&contents) {
             panic!("panic requested in read_output");
@@ -189,7 +211,7 @@ impl Program for Molpro {
                     .unwrap()
                     .parse()
                     .unwrap_or_else(|e| panic!("{e:#?}"));
-            } else if ENERGY.is_match(line) {
+            } else if energy_line().is_match(line) {
                 let energy_str = line.split_whitespace().last();
                 if let Some(e) = energy_str {
                     energy = if let Ok(v) = e.parse::<f64>() {
