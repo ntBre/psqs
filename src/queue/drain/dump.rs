@@ -45,15 +45,23 @@ impl Dump {
     }
 
     pub(crate) fn shutdown(self) {
-        time!("dropping", {
+        time!(e, {
             drop(self.sender);
         });
+        eprintln!(
+            "finished dropping after {:.1} s",
+            e.as_millis() as f64 / 1000.0
+        );
         // it's okay for this to fail because it just means the receiving thread
         // exited first
         let _ = self.signal.send(());
         drop(self.signal);
-        time!("joining", {
+        time!(e, {
             self.handle.join().unwrap();
         });
+        eprintln!(
+            "finished dropping after {:.1} s",
+            e.as_millis() as f64 / 1000.0
+        );
     }
 }

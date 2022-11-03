@@ -13,15 +13,13 @@ use crate::{
 
 use super::{Queue, DEBUG};
 
+/// time the duration of `$body` and store the resulting Duration in `$elapsed`
+#[macro_export]
 macro_rules! time {
-    ($msg:expr, $body:block) => {
+    ($elapsed:ident, $body:block) => {
         let now = std::time::Instant::now();
         $body;
-        eprintln!(
-            "finished {} after {:.1} s",
-            $msg,
-            now.elapsed().as_millis() as f64 / 1000.0
-        );
+        let $elapsed = now.elapsed();
     };
 }
 
@@ -66,7 +64,7 @@ pub(crate) trait Drain {
                 match chunks.next() {
                     Some(jobs) => {
                         let now = std::time::Instant::now();
-                        queue.build_chunk(
+                        let(wi, ws, ss) = queue.build_chunk(
                             dir,
                             jobs,
                             chunk_num,
@@ -83,7 +81,9 @@ pub(crate) trait Drain {
                                 elapsed.as_millis() as f64 / 1000.0
                             );
                         }
-                        time.writing += elapsed;
+                        time.writing_input += wi;
+                        time.writing_script += ws;
+                        time.submitting_script += ss;
                         chunk_num += 1;
                         cur_jobs.extend(jobs);
                     }
@@ -101,7 +101,7 @@ pub(crate) trait Drain {
                 cur_jobs.iter().map(|job| job.program.filename()).collect();
             use rayon::prelude::*;
             let results: Vec<_> =
-                outfiles.par_iter().map(|out| P::read_output(out)).collect();
+                outfiles.iter().map(|out| P::read_output(out)).collect();
             time.reading += now.elapsed();
             for (i, (job, res)) in cur_jobs.iter_mut().zip(results).enumerate()
             {

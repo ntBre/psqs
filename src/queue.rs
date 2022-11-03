@@ -3,12 +3,16 @@ use std::{
     path::Path,
     process::Command,
     str,
+    time::Duration,
 };
 
-use crate::program::{Job, ProgramResult};
 use crate::{
     geom::Geom,
     program::{Procedure, Program, ProgramError},
+};
+use crate::{
+    program::{Job, ProgramResult},
+    time,
 };
 
 pub mod local;
@@ -104,7 +108,9 @@ where
     }
 
     /// Build a chunk of jobs by writing the Program input file and the
-    /// corresponding submission script and then submitting the script
+    /// corresponding submission script and then submitting the script. returns
+    /// the total durations spent writing input files, writing the submit
+    /// script, and submitting the script
     fn build_chunk<'a>(
         &self,
         dir: &str,
@@ -112,26 +118,40 @@ where
         chunk_num: usize,
         slurm_jobs: &'a mut HashMap<String, usize>,
         proc: Procedure,
-    ) {
+    ) -> (Duration, Duration, Duration) {
+        let mut input = Duration::default();
+        let mut script = Duration::default();
+        let mut submit = Duration::default();
         let queue_file =
             format!("{}/main{}.{}", dir, chunk_num, Self::SCRIPT_EXT);
         let jl = jobs.len();
         use rayon::prelude::*;
-        let filenames: Vec<_> = jobs
-            .par_iter_mut()
+        let mut filenames = Vec::with_capacity(jobs.len());
+        jobs.iter_mut()
             .map(|job| {
-                job.program.write_input(proc);
+                time!(e, {
+                    job.program.write_input(proc);
+                });
+                input += e;
                 job.pbs_file = queue_file.to_string();
                 job.program.filename()
             })
-            .collect();
+            .collect_into(&mut filenames);
         slurm_jobs.insert(queue_file.clone(), jl);
-        self.write_submit_script(&filenames, &queue_file);
+        time!(e, {
+            self.write_submit_script(&filenames, &queue_file);
+        });
+        script += e;
         // run jobs
-        let job_id = self.submit(&queue_file);
+        let job_id;
+        time!(e, {
+            job_id = self.submit(&queue_file);
+        });
+        submit += e;
         for mut job in jobs {
             job.job_id = job_id.clone();
         }
+	(input, script, submit)
     }
 
     fn drain_err_case(
