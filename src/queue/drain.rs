@@ -26,7 +26,6 @@ macro_rules! time {
 }
 
 mod dump;
-mod histogram;
 mod timer;
 
 pub(crate) trait Drain {
@@ -55,9 +54,6 @@ pub(crate) trait Drain {
 
         let dump = Dump::new();
         let mut time = timer::Timer::default();
-
-        // histogram for tracking job times
-        let mut job_time = histogram::Histogram::<100>::new(0.0, 10.0);
 
         let mut qstat = HashSet::<String>::new();
         let mut chunks = jobs.chunks_mut(queue.chunk_size());
@@ -112,7 +108,6 @@ pub(crate) trait Drain {
                 match res {
                     Ok(res) => {
                         to_remove.push(i);
-                        job_time.insert(res.time);
                         self.set_result(dst, *job, res);
                         for f in job.program.associated_files() {
                             dump.send(f);
@@ -169,11 +164,6 @@ pub(crate) trait Drain {
             if cur_jobs.is_empty() && out_of_jobs {
                 dump.shutdown();
                 eprintln!("{}", time);
-                eprintln!("total job time: {:.2} s", job_time.total);
-                eprintln!("max job time: {:.2} s", job_time.cur_max);
-                eprintln!("min job time: {:.2} s", job_time.cur_min);
-                eprintln!("avg job time: {:.2} s", job_time.average());
-                eprint!("histogram:\n{}", job_time);
                 return Ok(());
             }
             if finished == 0 {
