@@ -19,6 +19,7 @@ pub mod local;
 pub mod pbs;
 pub mod slurm;
 use drain::*;
+use lazy_static::lazy_static;
 mod drain;
 
 static DEBUG: bool = false;
@@ -176,6 +177,9 @@ where
         slurm_jobs: &mut HashMap<String, usize>,
         job: &mut Job<P>,
     ) {
+        lazy_static! {
+            static ref NO_RESUB: bool = std::env::var("SEMP_RESUB").is_ok();
+        }
         // just overwrite the existing job with the resubmitted
         // version
         if !qstat.contains(&job.job_id) {
@@ -186,7 +190,16 @@ where
                 job.modtime = time;
                 return;
             }
-            eprintln!("resubmitting {} for {:?}", job.program.filename(), e);
+            eprintln!(
+                "resubmitting {} (id={}) for {:?}",
+                job.program.filename(),
+                job.job_id,
+                e
+            );
+            if *NO_RESUB {
+                eprintln!("resubmission disabled by SEMP_RESUB environment variable, exiting");
+                std::process::exit(1);
+            }
             let resub = format!(
                 "{}.{}",
                 job.program.filename(),

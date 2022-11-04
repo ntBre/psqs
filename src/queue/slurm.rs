@@ -87,6 +87,7 @@ impl Queue<Mopac> for Slurm {
 #SBATCH --no-requeue
 #SBATCH --mem=1gb
 export LD_LIBRARY_PATH=/home/qc/mopac2016/
+echo $SLURM_JOB_ID
 date
 hostname\n",
         );
