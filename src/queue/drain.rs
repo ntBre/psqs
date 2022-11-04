@@ -1,5 +1,6 @@
 use core::time;
 use std::{
+    borrow::BorrowMut,
     collections::{HashMap, HashSet},
     marker::Send,
     thread,
@@ -38,41 +39,56 @@ pub(crate) trait Drain {
         res: ProgramResult,
     );
 
-    fn drain<P: Program + Clone + Send, Q: Queue<P> + ?Sized>(
+    fn drain<
+        P: Program + Clone + Send + std::marker::Sync,
+        Q: Queue<P> + ?Sized + std::marker::Sync,
+    >(
         &self,
         dir: &str,
         queue: &Q,
         jobs: &mut [Job<P>],
         dst: &mut [Self::Item],
-    ) -> Result<(), ProgramError> {
-        let mut chunk_num: usize = 0;
+    ) -> Result<(), ProgramError>
+    where
+        Self: std::marker::Sync,
+    {
         let mut cur_jobs = Vec::new();
         let mut slurm_jobs = HashMap::new();
         let mut remaining = jobs.len();
+
+        let job_limit = queue.job_limit();
+
+        let mut out_of_jobs = false;
 
         let dump = Dump::new();
         let mut time = timer::Timer::default();
 
         let mut qstat = HashSet::<String>::new();
-        let mut chunks = jobs.chunks_mut(queue.chunk_size());
-        let mut out_of_jobs = false;
+        let mut chunks = jobs
+            .chunks_mut(queue.chunk_size())
+            .enumerate()
+            .fuse()
+            .peekable();
         let mut to_remove = Vec::new();
         loop {
             let loop_time = std::time::Instant::now();
-            // build more jobs if there is room
-            while !out_of_jobs && cur_jobs.len() < queue.job_limit() {
-                match chunks.next() {
-                    Some(jobs) => {
+            if chunks.peek().is_none() {
+                out_of_jobs = true;
+            }
+            if !out_of_jobs {
+                let works: Vec<_> = chunks
+                    .borrow_mut()
+                    .take(job_limit - cur_jobs.len() / queue.chunk_size())
+                    .par_bridge()
+                    .map(|(chunk_num, jobs)| {
                         let now = std::time::Instant::now();
-                        let(wi, ws, ss) = queue.build_chunk(
+                        let (slurm_jobs, wi, ws, ss) = queue.build_chunk(
                             dir,
                             jobs,
                             chunk_num,
-                            &mut slurm_jobs,
                             self.procedure(),
                         );
                         let job_id = jobs[0].job_id.clone();
-                        qstat.insert(job_id);
                         let elapsed = now.elapsed();
                         if DEBUG {
                             eprintln!(
@@ -81,18 +97,19 @@ pub(crate) trait Drain {
                                 elapsed.as_millis() as f64 / 1000.0
                             );
                         }
-                        time.writing_input += wi;
-                        time.writing_script += ws;
-                        time.submitting_script += ss;
-                        chunk_num += 1;
-                        cur_jobs.extend(jobs);
-                    }
-                    None => {
-                        out_of_jobs = true;
-                        break;
-                    }
+                        (jobs, slurm_jobs, job_id, wi, ws, ss)
+                    })
+                    .collect();
+                for (jobs, sj, job_id, wi, ws, ss) in works {
+                    slurm_jobs.extend(sj);
+                    time.writing_input += wi;
+                    time.writing_script += ws;
+                    time.submitting_script += ss;
+                    qstat.insert(job_id);
+                    cur_jobs.extend(jobs);
                 }
             }
+
             // collect output
             let mut finished = 0;
             to_remove.clear();

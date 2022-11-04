@@ -34,7 +34,7 @@ impl LocalQueue {
 
 impl<P: Program + Clone> Submit<P> for LocalQueue {}
 
-impl<P: Program + Clone + Send> Queue<P> for LocalQueue {
+impl<P: Program + Clone + Send + std::marker::Sync> Queue<P> for LocalQueue {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
         use std::fmt::Write;
         let mut body = String::from("export LD_LIBRARY_PATH=/opt/mopac/\n");

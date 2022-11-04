@@ -74,7 +74,7 @@ where
 
 pub trait Queue<P>: SubQueue<P> + Submit<P>
 where
-    P: Program + Clone + Send,
+    P: Program + Clone + Send + std::marker::Sync,
 {
     fn write_submit_script(&self, infiles: &[String], filename: &str);
 
@@ -111,22 +111,21 @@ where
     /// corresponding submission script and then submitting the script. returns
     /// the total durations spent writing input files, writing the submit
     /// script, and submitting the script
-    fn build_chunk<'a>(
+    fn build_chunk(
         &self,
         dir: &str,
         jobs: &mut [Job<P>],
         chunk_num: usize,
-        slurm_jobs: &'a mut HashMap<String, usize>,
         proc: Procedure,
-    ) -> (Duration, Duration, Duration) {
+    ) -> (HashMap<String, usize>, Duration, Duration, Duration) {
         let mut input = Duration::default();
         let mut script = Duration::default();
         let mut submit = Duration::default();
         let queue_file =
             format!("{}/main{}.{}", dir, chunk_num, Self::SCRIPT_EXT);
         let jl = jobs.len();
-        use rayon::prelude::*;
         let mut filenames = Vec::with_capacity(jobs.len());
+        let mut slurm_jobs = HashMap::new();
         jobs.iter_mut()
             .map(|job| {
                 time!(e, {
@@ -151,7 +150,7 @@ where
         for mut job in jobs {
             job.job_id = job_id.clone();
         }
-	(input, script, submit)
+        (slurm_jobs, input, script, submit)
     }
 
     fn drain_err_case(
@@ -196,7 +195,10 @@ where
         dir: &str,
         jobs: &mut [Job<P>],
         dst: &mut [Geom],
-    ) -> Result<(), ProgramError> {
+    ) -> Result<(), ProgramError>
+    where
+        Self: std::marker::Sync,
+    {
         Opt.drain(dir, self, jobs, dst)
     }
 
@@ -205,7 +207,10 @@ where
         dir: &str,
         jobs: &mut [Job<P>],
         dst: &mut [f64],
-    ) -> Result<(), ProgramError> {
+    ) -> Result<(), ProgramError>
+    where
+        Self: std::marker::Sync,
+    {
         Single.drain(dir, self, jobs, dst)
     }
 
@@ -214,7 +219,10 @@ where
         dir: &str,
         jobs: &mut [Job<P>],
         dst: &mut [ProgramResult],
-    ) -> Result<(), ProgramError> {
+    ) -> Result<(), ProgramError>
+    where
+        Self: std::marker::Sync,
+    {
         Both.drain(dir, self, jobs, dst)
     }
 }
