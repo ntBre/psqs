@@ -101,7 +101,7 @@ pub(crate) trait Drain {
                 cur_jobs.iter().map(|job| job.program.filename()).collect();
             use rayon::prelude::*;
             let results: Vec<_> =
-                outfiles.iter().map(|out| P::read_output(out)).collect();
+                outfiles.par_iter().map(|out| P::read_output(out)).collect();
             time.reading += now.elapsed();
             for (i, (job, res)) in cur_jobs.iter_mut().zip(results).enumerate()
             {
