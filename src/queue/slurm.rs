@@ -86,7 +86,9 @@ impl Queue<Mopac> for Slurm {
 #SBATCH -o {filename}.out
 #SBATCH --no-requeue
 #SBATCH --mem=1gb
-export LD_LIBRARY_PATH=/home/qc/mopac2016/\n",
+export LD_LIBRARY_PATH=/home/qc/mopac2016/
+date
+hostname\n",
         );
         for f in infiles {
             body.push_str(&format!(
