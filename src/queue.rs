@@ -36,13 +36,29 @@ where
 {
     /// submit `filename` to the queue and return the jobid
     fn submit(&self, filename: &str) -> String {
-        match Command::new(self.submit_command()).arg(filename).output() {
-            Ok(s) => {
-                let raw = str::from_utf8(&s.stdout).unwrap().trim().to_string();
-                return raw.split_whitespace().last().unwrap_or("").to_string();
-            }
-            Err(e) => panic!("{e:?}"),
-        };
+        loop {
+            match Command::new(self.submit_command()).arg(filename).output() {
+                Ok(s) => {
+                    if s.status.success() {
+                        let raw = str::from_utf8(&s.stdout)
+                            .unwrap()
+                            .trim()
+                            .to_string();
+                        return raw
+                            .split_whitespace()
+                            .last()
+                            .unwrap_or("")
+                            .to_string();
+                    }
+                    eprintln!(
+                        "failed to submit {filename} with {:?}",
+                        s.stderr
+                    );
+                    std::thread::sleep(Duration::from_secs(1));
+                }
+                Err(e) => panic!("{e:?}"),
+            };
+        }
     }
 }
 
