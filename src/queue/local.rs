@@ -12,6 +12,7 @@ use super::{SubQueue, Submit};
 pub struct LocalQueue {
     pub dir: String,
     pub chunk_size: usize,
+    pub mopac: String,
 }
 
 impl Default for LocalQueue {
@@ -19,15 +20,17 @@ impl Default for LocalQueue {
         Self {
             dir: ".".to_string(),
             chunk_size: 128,
+            mopac: "/opt/mopac/mopac".to_owned(),
         }
     }
 }
 
 impl LocalQueue {
-    pub fn new(dir: &str, chunk_size: usize) -> Self {
+    pub fn new(dir: &str, chunk_size: usize, mopac: &'static str) -> Self {
         Self {
             dir: dir.to_string(),
             chunk_size,
+            mopac: mopac.to_string(),
         }
     }
 }
@@ -39,7 +42,7 @@ impl<P: Program + Clone + Send + std::marker::Sync> Queue<P> for LocalQueue {
         use std::fmt::Write;
         let mut body = String::from("export LD_LIBRARY_PATH=/opt/mopac/\n");
         for f in infiles {
-            writeln!(body, "/opt/mopac/mopac {f}.mop").unwrap();
+            writeln!(body, "{} {f}.mop", self.mopac).unwrap();
         }
         writeln!(body, "touch {filename}.out").unwrap();
         body.push_str("date +%s\n");
