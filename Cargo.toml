@@ -21,3 +21,7 @@ name = "read_out"
 [[bench]]
 name = "read_aux"
 harness = false
+
+[[bench]]
+name = "write_input"
+harness = false
