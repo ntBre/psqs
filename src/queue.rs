@@ -52,8 +52,8 @@ where
                             .to_string();
                     }
                     eprintln!(
-                        "failed to submit {filename} with {:?}",
-                        s.stderr
+                        "failed to submit {filename} with `{}`",
+                        String::from_utf8_lossy(&s.stderr)
                     );
                     std::thread::sleep(Duration::from_secs(1));
                 }
