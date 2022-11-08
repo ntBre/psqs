@@ -6,7 +6,7 @@ test:
 	RUST_BACKTRACE=1 cargo test ${TESTFLAGS} ${ARGS}
 
 bench:
-	RUST_BACKTRACE=1 cargo bench ${ARGS}
+	RUST_BACKTRACE=1 cargo bench -- --color never ${ARGS}
 
 profile = RUSTFLAGS='-g' cargo build --release --bin $(1); \
 	valgrind --tool=callgrind --callgrind-out-file=callgrind.out	\
