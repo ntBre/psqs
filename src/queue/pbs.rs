@@ -81,7 +81,7 @@ impl Submit<Molpro> for Pbs {
                     std::str::from_utf8(&s.stdout).unwrap().trim().to_string();
                 return raw.split_whitespace().last().unwrap().to_string();
             }
-            Err(_) => todo!(),
+            Err(e) => panic!("{e:?}"),
         };
     }
 }
