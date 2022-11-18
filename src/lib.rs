@@ -17,3 +17,12 @@ macro_rules! string {
         vec![$(String::from($str),)*] as Vec<String>
     });
 }
+
+/// call `rayon::ThreadPoolBuilder` to set `num_threads` to `n`. Discards the
+/// error returned by `build_global` if the thread pool has already been
+/// initialized
+pub fn max_threads(n: usize) {
+    let _ = rayon::ThreadPoolBuilder::new()
+        .num_threads(n)
+        .build_global();
+}
