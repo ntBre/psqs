@@ -58,7 +58,11 @@ impl Submit<Mopac> for Pbs {
             Ok(s) => {
                 let raw =
                     std::str::from_utf8(&s.stdout).unwrap().trim().to_string();
-                return raw.split_whitespace().last().unwrap_or("").to_string();
+                return raw
+                    .split_whitespace()
+                    .last()
+                    .unwrap_or("no jobid")
+                    .to_string();
             }
             Err(e) => panic!("{e:?}"),
         };
