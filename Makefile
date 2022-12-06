@@ -2,6 +2,10 @@ TESTFLAGS = -- --nocapture --test-threads=1
 ARGS =
 BASE = .
 
+clippy:
+	cargo clippy
+	cargo clippy --tests
+
 test:
 	RUST_BACKTRACE=1 cargo test ${TESTFLAGS} ${ARGS}
 
