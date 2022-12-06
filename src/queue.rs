@@ -135,11 +135,22 @@ where
         chunk_num: usize,
         proc: Procedure,
     ) -> (HashMap<String, usize>, Duration, Duration, Duration) {
+        self.build_chunk_inner(dir, "main", chunk_num, jobs, proc)
+    }
+
+    fn build_chunk_inner(
+        &self,
+        dir: &str,
+        base: &str,
+        chunk_num: usize,
+        jobs: &mut [Job<P>],
+        proc: Procedure,
+    ) -> (HashMap<String, usize>, Duration, Duration, Duration) {
         let mut input = Duration::default();
         let mut script = Duration::default();
         let mut submit = Duration::default();
         let queue_file =
-            format!("{}/main{}.{}", dir, chunk_num, Self::SCRIPT_EXT);
+            format!("{}/{base}{}.{}", dir, chunk_num, Self::SCRIPT_EXT);
         let jl = jobs.len();
         let mut filenames = Vec::with_capacity(jobs.len());
         let mut slurm_jobs = HashMap::new();
@@ -222,7 +233,7 @@ where
     fn optimize(
         &self,
         dir: &str,
-        jobs: &mut [Job<P>],
+        jobs: Vec<Job<P>>,
         dst: &mut [Geom],
     ) -> Result<(), ProgramError>
     where
@@ -234,7 +245,7 @@ where
     fn drain(
         &self,
         dir: &str,
-        jobs: &mut [Job<P>],
+        jobs: Vec<Job<P>>,
         dst: &mut [f64],
     ) -> Result<(), ProgramError>
     where
@@ -246,7 +257,7 @@ where
     fn energize(
         &self,
         dir: &str,
-        jobs: &mut [Job<P>],
+        jobs: Vec<Job<P>>,
         dst: &mut [ProgramResult],
     ) -> Result<(), ProgramError>
     where

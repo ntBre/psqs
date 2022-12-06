@@ -9,7 +9,7 @@ use std::{
 use crate::{
     geom::Geom,
     program::{Job, Procedure, Program, ProgramError, ProgramResult},
-    queue::drain::dump::Dump,
+    queue::drain::{dump::Dump, resub::ResubOutput},
 };
 
 use super::{Queue, DEBUG};
@@ -25,7 +25,15 @@ macro_rules! time {
 }
 
 mod dump;
+mod resub;
 mod timer;
+
+use lazy_static::lazy_static;
+use resub::Resub;
+
+lazy_static! {
+    static ref NO_RESUB: bool = std::env::var("NO_RESUB").is_ok();
+}
 
 pub(crate) trait Drain {
     type Item;
@@ -46,7 +54,7 @@ pub(crate) trait Drain {
         &self,
         dir: &str,
         queue: &Q,
-        jobs: &mut [Job<P>],
+        mut jobs: Vec<Job<P>>,
         dst: &mut [Self::Item],
     ) -> Result<(), ProgramError>
     where
@@ -70,6 +78,7 @@ pub(crate) trait Drain {
             .fuse()
             .peekable();
         let mut to_remove = Vec::new();
+        let mut resub = Resub::new(queue, dir, self.procedure());
         loop {
             let loop_time = std::time::Instant::now();
             if chunks.peek().is_none() {
@@ -97,7 +106,7 @@ pub(crate) trait Drain {
                                 elapsed.as_millis() as f64 / 1000.0
                             );
                         }
-                        (jobs, slurm_jobs, job_id, wi, ws, ss)
+                        (jobs.to_vec(), slurm_jobs, job_id, wi, ws, ss)
                     })
                     .collect();
                 for (jobs, sj, job_id, wi, ws, ss) in works {
@@ -125,7 +134,7 @@ pub(crate) trait Drain {
                 match res {
                     Ok(res) => {
                         to_remove.push(i);
-                        self.set_result(dst, *job, res);
+                        self.set_result(dst, job, res);
                         for f in job.program.associated_files() {
                             dump.send(f);
                         }
@@ -154,12 +163,36 @@ pub(crate) trait Drain {
                             dump.shutdown();
                             return Err(e);
                         }
-                        queue.drain_err_case(
-                            e,
-                            &mut qstat,
-                            &mut slurm_jobs,
-                            job,
-                        );
+                        // just overwrite the existing job with the resubmitted
+                        // version
+                        if !qstat.contains(&job.job_id) {
+                            let time = job.modtime();
+                            if time > job.modtime {
+                                // file has been updated since we last looked at it, so need to
+                                // look again
+                                job.modtime = time;
+                            } else {
+                                // actual resubmission path
+                                eprintln!(
+                                    "resubmitting {} (id={}) for {:?}",
+                                    job.program.filename(),
+                                    job.job_id,
+                                    e
+                                );
+                                if *NO_RESUB {
+                                    eprintln!(
+                                        "resubmission disabled by \
+					 NO_RESUB environment \
+					 variable, exiting"
+                                    );
+                                    std::process::exit(1);
+                                }
+                                // copy the job into resub and plan to remove it
+                                // from cur_jobs
+                                resub.push(job.clone());
+                                to_remove.push(i);
+                            }
+                        };
                     }
                 }
             }
@@ -171,6 +204,24 @@ pub(crate) trait Drain {
                 cur_jobs.swap_remove(*i);
             }
             time.removing += r.elapsed();
+            // submit resubs
+            let works = resub.resubmit();
+            for ResubOutput {
+                jobs,
+                slurm_jobs: sj,
+                job_id,
+                writing_input: wi,
+                writing_script: ws,
+                submitting: ss,
+            } in works
+            {
+                slurm_jobs.extend(sj);
+                time.writing_input += wi;
+                time.writing_script += ws;
+                time.submitting_script += ss;
+                qstat.insert(job_id);
+                cur_jobs.extend(jobs);
+            }
             if DEBUG {
                 eprintln!(
                     "finished {} jobs in {:.1} s",
