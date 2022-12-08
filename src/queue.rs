@@ -235,7 +235,7 @@ where
         dir: &str,
         jobs: Vec<Job<P>>,
         dst: &mut [Geom],
-    ) -> Result<(), ProgramError>
+    ) -> Result<f64, ProgramError>
     where
         Self: std::marker::Sync,
     {
@@ -247,7 +247,7 @@ where
         dir: &str,
         jobs: Vec<Job<P>>,
         dst: &mut [f64],
-    ) -> Result<(), ProgramError>
+    ) -> Result<f64, ProgramError>
     where
         Self: std::marker::Sync,
     {
@@ -259,7 +259,7 @@ where
         dir: &str,
         jobs: Vec<Job<P>>,
         dst: &mut [ProgramResult],
-    ) -> Result<(), ProgramError>
+    ) -> Result<f64, ProgramError>
     where
         Self: std::marker::Sync,
     {

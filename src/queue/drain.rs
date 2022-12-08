@@ -47,6 +47,7 @@ pub(crate) trait Drain {
         res: ProgramResult,
     );
 
+    /// on success, return the total job time, as returned by `P::read_output`
     fn drain<
         P: Program + Clone + Send + std::marker::Sync,
         Q: Queue<P> + ?Sized + std::marker::Sync,
@@ -56,10 +57,13 @@ pub(crate) trait Drain {
         queue: &Q,
         mut jobs: Vec<Job<P>>,
         dst: &mut [Self::Item],
-    ) -> Result<(), ProgramError>
+    ) -> Result<f64, ProgramError>
     where
         Self: std::marker::Sync,
     {
+        // total time for the jobs to run as returned from Program::read_output
+        let mut job_time = 0.0;
+
         let mut cur_jobs = Vec::new();
         let mut slurm_jobs = HashMap::new();
         let mut remaining = jobs.len();
@@ -134,6 +138,7 @@ pub(crate) trait Drain {
                 match res {
                     Ok(res) => {
                         to_remove.push(i);
+                        job_time += res.time;
                         self.set_result(dst, job, res);
                         for f in job.program.associated_files() {
                             dump.send(f);
@@ -232,7 +237,7 @@ pub(crate) trait Drain {
             if cur_jobs.is_empty() && out_of_jobs {
                 dump.shutdown();
                 eprintln!("{}", time);
-                return Ok(());
+                return Ok(job_time);
             }
             if finished == 0 {
                 eprintln!("{} jobs remaining", remaining);
