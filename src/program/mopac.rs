@@ -2,13 +2,14 @@ use crate::geom::{geom_string, Geom};
 use crate::program::{Program, ProgramError};
 use lazy_static::lazy_static;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 use symm::Atom;
 
+use super::{Job, Procedure, ProgramResult, Template};
 use std::collections::hash_map::DefaultHasher;
 use std::fs::{read_to_string, File};
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Write};
-use super::{Job, Procedure, ProgramResult, Template};
 
 /// kcal/mol per hartree
 pub const KCALHT: f64 = 627.5091809;
@@ -22,7 +23,7 @@ mod tests;
 /// Mopac holds the information needed to write a MOPAC input file. `filename`
 /// should not include an extension. `.mop` will be appended for input files,
 /// and `.out` and `.aux` will be appended for output files.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Mopac {
     pub filename: String,
 

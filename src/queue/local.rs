@@ -2,6 +2,8 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 
+use serde::{Deserialize, Serialize};
+
 use crate::program::Program;
 use crate::queue::Queue;
 
@@ -35,9 +37,20 @@ impl LocalQueue {
     }
 }
 
-impl<P: Program + Clone> Submit<P> for LocalQueue {}
+impl<P> Submit<P> for LocalQueue where
+    P: Program + Clone + Serialize + for<'a> Deserialize<'a>
+{
+}
 
-impl<P: Program + Clone + Send + std::marker::Sync> Queue<P> for LocalQueue {
+impl<
+        P: Program
+            + Clone
+            + Send
+            + std::marker::Sync
+            + Serialize
+            + for<'a> Deserialize<'a>,
+    > Queue<P> for LocalQueue
+{
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
         use std::fmt::Write;
         let mut body = String::from("export LD_LIBRARY_PATH=/opt/mopac/\n");
@@ -53,7 +66,9 @@ impl<P: Program + Clone + Send + std::marker::Sync> Queue<P> for LocalQueue {
     }
 }
 
-impl<P: Program + Clone> SubQueue<P> for LocalQueue {
+impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
+    for LocalQueue
+{
     fn submit_command(&self) -> &str {
         "bash"
     }

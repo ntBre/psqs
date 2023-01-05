@@ -20,6 +20,7 @@ pub mod pbs;
 pub mod slurm;
 use drain::*;
 use lazy_static::lazy_static;
+use serde::{Deserialize, Serialize};
 mod drain;
 
 static DEBUG: bool = false;
@@ -33,7 +34,7 @@ pub struct Resubmit {
 
 pub trait Submit<P>: SubQueue<P>
 where
-    P: Program + Clone,
+    P: Program + Clone + Serialize + for<'a> Deserialize<'a>,
 {
     /// submit `filename` to the queue and return the jobid
     fn submit(&self, filename: &str) -> String {
@@ -66,7 +67,7 @@ where
 /// a trait for all of the program-independent parts of a [Queue]
 pub trait SubQueue<P>
 where
-    P: Program + Clone,
+    P: Program + Clone + Serialize + for<'a> Deserialize<'a>,
 {
     /// the extension to append to submit scripts for this type of Queue
     const SCRIPT_EXT: &'static str;
@@ -91,7 +92,12 @@ where
 
 pub trait Queue<P>: SubQueue<P> + Submit<P>
 where
-    P: Program + Clone + Send + std::marker::Sync,
+    P: Program
+        + Clone
+        + Send
+        + std::marker::Sync
+        + Serialize
+        + for<'a> Deserialize<'a>,
 {
     fn write_submit_script(&self, infiles: &[String], filename: &str);
 
@@ -239,7 +245,22 @@ where
     where
         Self: std::marker::Sync,
     {
-        Opt.drain(dir, self, jobs, dst)
+        Opt.drain(dir, self, jobs, dst, 0)
+    }
+
+    /// resume draining from the checkpoint file in `checkpoint`
+    fn resume(
+        &self,
+        dir: &str,
+        checkpoint: &str,
+        dst: &mut [f64],
+        check_int: usize,
+    ) -> Result<f64, ProgramError>
+    where
+        Self: Sync,
+    {
+        let jobs = Single::load_checkpoint(checkpoint, dst);
+        self.drain(dir, jobs, dst, check_int)
     }
 
     fn drain(
@@ -247,11 +268,12 @@ where
         dir: &str,
         jobs: Vec<Job<P>>,
         dst: &mut [f64],
+        check_int: usize,
     ) -> Result<f64, ProgramError>
     where
         Self: std::marker::Sync,
     {
-        Single.drain(dir, self, jobs, dst)
+        Single.drain(dir, self, jobs, dst, check_int)
     }
 
     fn energize(
@@ -263,6 +285,6 @@ where
     where
         Self: std::marker::Sync,
     {
-        Both.drain(dir, self, jobs, dst)
+        Both.drain(dir, self, jobs, dst, 0)
     }
 }

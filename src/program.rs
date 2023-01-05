@@ -1,5 +1,6 @@
 use std::time::SystemTime;
 
+use serde::{Deserialize, Serialize};
 use symm::Atom;
 
 use crate::geom::Geom;
@@ -7,7 +8,7 @@ use crate::geom::Geom;
 pub mod molpro;
 pub mod mopac;
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct ProgramResult {
     pub energy: f64,
     pub cart_geom: Option<Vec<Atom>>,
@@ -39,7 +40,7 @@ pub enum Procedure {
     SinglePt,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Template {
     pub header: String,
 }
@@ -127,7 +128,7 @@ pub trait Program {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Job<P: Program> {
     pub program: P,
     pub pbs_file: String,

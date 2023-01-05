@@ -1,8 +1,8 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{fmt::Display, str::FromStr};
 use symm::atom::Atom;
 
-#[derive(Debug, PartialEq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub enum Geom {
     Xyz(Vec<Atom>),
     Zmat(String),

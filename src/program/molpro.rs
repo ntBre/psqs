@@ -2,6 +2,7 @@ use std::fs::{read_to_string, File};
 
 use lazy_static::lazy_static;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 
 use crate::geom::{geom_string, Geom};
 
@@ -10,7 +11,7 @@ use super::{Procedure, Program, ProgramError, ProgramResult, Template};
 #[cfg(test)]
 mod tests;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Molpro {
     filename: String,
     template: Template,

@@ -1,8 +1,9 @@
 use std::{fmt::Display, str::FromStr};
 
 use nalgebra as na;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Params {
     pub names: Vec<String>,
     pub atoms: Vec<String>,

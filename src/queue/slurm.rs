@@ -2,6 +2,8 @@ use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 
+use serde::{Deserialize, Serialize};
+
 use crate::program::molpro::Molpro;
 use crate::program::mopac::Mopac;
 use crate::program::Program;
@@ -46,7 +48,10 @@ impl Default for Slurm {
     }
 }
 
-impl<P: Program + Clone> Submit<P> for Slurm {}
+impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> Submit<P>
+    for Slurm
+{
+}
 
 impl Queue<Molpro> for Slurm {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
@@ -107,7 +112,9 @@ hostname\n",
     }
 }
 
-impl<P: Program + Clone> SubQueue<P> for Slurm {
+impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
+    for Slurm
+{
     fn submit_command(&self) -> &str {
         "sbatch"
     }

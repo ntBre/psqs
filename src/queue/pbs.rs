@@ -3,6 +3,8 @@ use std::io::Write;
 use std::path::Path;
 use std::{collections::HashSet, process::Command};
 
+use serde::{Deserialize, Serialize};
+
 use crate::program::molpro::Molpro;
 use crate::program::mopac::Mopac;
 use crate::program::Program;
@@ -47,7 +49,10 @@ impl Default for Pbs {
     }
 }
 
-impl Submit<Mopac> for Pbs {
+impl Submit<Mopac> for Pbs
+where
+    Mopac: Serialize + for<'a> Deserialize<'a>,
+{
     /// submit `filename` to the queue and return the jobid
     fn submit(&self, filename: &str) -> String {
         match Command::new(<Self as SubQueue<Mopac>>::submit_command(self))
@@ -71,7 +76,10 @@ impl Submit<Mopac> for Pbs {
 
 // Molpro 2022 submit script requires submission from the current directory, so
 // we have to override the default impl
-impl Submit<Molpro> for Pbs {
+impl Submit<Molpro> for Pbs
+where
+    Molpro: Serialize + for<'a> Deserialize<'a>,
+{
     fn submit(&self, filename: &str) -> String {
         let path = Path::new(filename);
         let dir = path.parent().unwrap();
@@ -90,7 +98,10 @@ impl Submit<Molpro> for Pbs {
     }
 }
 
-impl Queue<Molpro> for Pbs {
+impl Queue<Molpro> for Pbs
+where
+    Molpro: Serialize + for<'a> Deserialize<'a>,
+{
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
         let path = Path::new(filename);
         let basename = path.file_name().unwrap();
@@ -175,7 +186,9 @@ cd $WORKDIR
     }
 }
 
-impl<P: Program + Clone> SubQueue<P> for Pbs {
+impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
+    for Pbs
+{
     fn submit_command(&self) -> &str {
         "qsub"
     }

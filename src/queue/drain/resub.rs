@@ -1,5 +1,7 @@
 use std::{collections::HashMap, path::Path, time::Duration};
 
+use serde::{Deserialize, Serialize};
+
 use crate::{
     program::{Job, Procedure, Program},
     queue::Queue,
@@ -7,7 +9,7 @@ use crate::{
 
 pub(crate) struct Resub<
     'a,
-    P: Program + Clone + Send + Sync,
+    P: Program + Clone + Send + Sync + Serialize + for<'d> Deserialize<'d>,
     Q: Queue<P> + ?Sized,
 > {
     jobs: Vec<Job<P>>,
@@ -46,8 +48,11 @@ impl<P: Program + Clone + Send + Sync> ResubOutput<P> {
     }
 }
 
-impl<'a, P: Program + Clone + Send + Sync, Q: Queue<P> + ?Sized>
-    Resub<'a, P, Q>
+impl<
+        'a,
+        P: Program + Clone + Send + Sync + Serialize + for<'d> Deserialize<'d>,
+        Q: Queue<P> + ?Sized,
+    > Resub<'a, P, Q>
 {
     pub(crate) fn new(queue: &'a Q, dir: &'a str, proc: Procedure) -> Self {
         Self {
