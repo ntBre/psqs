@@ -61,6 +61,7 @@ pub(crate) trait Drain {
         Self: Sync,
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
         Q: Queue<P> + ?Sized + Sync,
+        <Self as Drain>::Item: Clone,
     {
         // total time for the jobs to run as returned from Program::read_output
         let mut job_time = 0.0;
@@ -249,7 +250,11 @@ pub(crate) trait Drain {
                 thread::sleep(d);
             }
             if check_int > 0 && check_int % iter == 0 {
-                // Q::write_checkpoint("chk.json", dst
+                Self::write_checkpoint(
+                    "chk.json",
+                    dst.to_vec(),
+                    cur_jobs.clone(),
+                );
             }
             iter += 1;
         }
@@ -262,8 +267,11 @@ pub(crate) trait Drain {
     where
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>;
 
-    fn write_checkpoint<P>(checkpoint: &str, dst: Vec<f64>, jobs: Vec<Job<P>>)
-    where
+    fn write_checkpoint<P>(
+        checkpoint: &str,
+        dst: Vec<Self::Item>,
+        jobs: Vec<Job<P>>,
+    ) where
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>;
 }
 
@@ -297,7 +305,7 @@ impl Drain for Opt {
 
     fn write_checkpoint<P>(
         _checkpoint: &str,
-        _dst: Vec<f64>,
+        _dst: Vec<Self::Item>,
         _jobs: Vec<Job<P>>,
     ) where
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
@@ -385,7 +393,7 @@ impl Drain for Both {
 
     fn write_checkpoint<P>(
         _checkpoint: &str,
-        _dst: Vec<f64>,
+        _dst: Vec<Self::Item>,
         _jobs: Vec<Job<P>>,
     ) where
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
