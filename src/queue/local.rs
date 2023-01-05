@@ -11,13 +11,13 @@ use super::{SubQueue, Submit};
 
 /// Minimal implementation for testing MOPAC locally
 #[derive(Debug)]
-pub struct LocalQueue {
+pub struct Local {
     pub dir: String,
     pub chunk_size: usize,
     pub mopac: String,
 }
 
-impl Default for LocalQueue {
+impl Default for Local {
     fn default() -> Self {
         Self {
             dir: ".".to_string(),
@@ -27,7 +27,7 @@ impl Default for LocalQueue {
     }
 }
 
-impl LocalQueue {
+impl Local {
     pub fn new(dir: &str, chunk_size: usize, mopac: &'static str) -> Self {
         Self {
             dir: dir.to_string(),
@@ -37,7 +37,7 @@ impl LocalQueue {
     }
 }
 
-impl<P> Submit<P> for LocalQueue where
+impl<P> Submit<P> for Local where
     P: Program + Clone + Serialize + for<'a> Deserialize<'a>
 {
 }
@@ -49,7 +49,7 @@ impl<
             + std::marker::Sync
             + Serialize
             + for<'a> Deserialize<'a>,
-    > Queue<P> for LocalQueue
+    > Queue<P> for Local
 {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
         use std::fmt::Write;
@@ -67,7 +67,7 @@ impl<
 }
 
 impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
-    for LocalQueue
+    for Local
 {
     fn submit_command(&self) -> &str {
         "bash"
