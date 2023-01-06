@@ -3,7 +3,6 @@ ARGS =
 BASE = .
 
 clippy:
-	cargo clippy
 	cargo clippy --tests
 
 test:
