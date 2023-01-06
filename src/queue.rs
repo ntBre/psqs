@@ -260,6 +260,10 @@ where
         Self: Sync,
     {
         let jobs = Single::load_checkpoint(checkpoint, dst);
+        eprintln!(
+            "resuming from checkpoint in '{checkpoint}' with {} jobs remaining",
+            jobs.len()
+        );
         self.drain(dir, jobs, dst, check_int)
     }
 

@@ -78,11 +78,24 @@ pub(crate) trait Drain {
         let mut time = timer::Timer::default();
 
         let mut qstat = HashSet::<String>::new();
+        // this is a bit sad, but I need the original jobs for checkpoints and I
+        // can't get an immutable reference to them while chunks is holding a
+        // mutable reference. also can't use a Cow because the chunks_mut call
+        // would clone immediately anyway. I wanted something like Cow because I
+        // only need this clone if check_int is nonzero. I also can't figure out
+        // how to clone chunks itself when writing the checkpoint. that would
+        // really be the ideal solution, but it seems I can only consume the
+        // iterator. another option would be to consume the iterator and rebuild
+        // it when writing the checkpoints
+        let jobs_init = jobs.clone();
         let mut chunks = jobs
             .chunks_mut(queue.chunk_size())
             .enumerate()
             .fuse()
             .peekable();
+        // the index of the last chunk consumed. used for writing remaining jobs
+        // to checkpoints. None initially and then Some(chunk_num)
+        let mut last_chunk = None;
         let mut to_remove = Vec::new();
         let mut resub = Resub::new(queue, dir, self.procedure());
         let mut iter = 1;
@@ -113,16 +126,25 @@ pub(crate) trait Drain {
                                 elapsed.as_millis() as f64 / 1000.0
                             );
                         }
-                        (jobs.to_vec(), slurm_jobs, job_id, wi, ws, ss)
+                        (
+                            jobs.to_vec(),
+                            slurm_jobs,
+                            job_id,
+                            wi,
+                            ws,
+                            ss,
+                            chunk_num,
+                        )
                     })
                     .collect();
-                for (jobs, sj, job_id, wi, ws, ss) in works {
+                for (jobs, sj, job_id, wi, ws, ss, cn) in works {
                     slurm_jobs.extend(sj);
                     time.writing_input += wi;
                     time.writing_script += ws;
                     time.submitting_script += ss;
                     qstat.insert(job_id);
                     cur_jobs.extend(jobs);
+                    last_chunk = Some(cn);
                 }
             }
 
@@ -176,8 +198,8 @@ pub(crate) trait Drain {
                         if !qstat.contains(&job.job_id) {
                             let time = job.modtime();
                             if time > job.modtime {
-                                // file has been updated since we last looked at it, so need to
-                                // look again
+                                // file has been updated since we last looked at
+                                // it, so need to look again
                                 job.modtime = time;
                             } else {
                                 // actual resubmission path
@@ -250,11 +272,15 @@ pub(crate) trait Drain {
                 thread::sleep(d);
             }
             if check_int > 0 && check_int % iter == 0 {
-                Self::write_checkpoint(
-                    "chk.json",
-                    dst.to_vec(),
-                    cur_jobs.clone(),
-                );
+                let mut cur_jobs = cur_jobs.clone();
+                // +1 because after the first chunk (chunk_num = 0) is written,
+                // we want to slice from the next chunk on
+                let cn = match last_chunk {
+                    Some(n) => n + 1,
+                    None => 0,
+                };
+                cur_jobs.extend(jobs_init[cn * queue.chunk_size()..].to_vec());
+                Self::write_checkpoint("chk.json", dst.to_vec(), cur_jobs);
             }
             iter += 1;
         }
