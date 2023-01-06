@@ -61,7 +61,7 @@ pub(crate) trait Drain {
         Self: Sync,
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
         Q: Queue<P> + ?Sized + Sync,
-        <Self as Drain>::Item: Clone,
+        <Self as Drain>::Item: Clone + Serialize,
     {
         // total time for the jobs to run as returned from Program::read_output
         let mut job_time = 0.0;
@@ -260,19 +260,34 @@ pub(crate) trait Drain {
         }
     }
 
+    /// load a checkpoint from the `checkpoint` file, storing the energies in
+    /// `dst` and returning the list of remaining jobs
     fn load_checkpoint<P>(
         checkpoint: &str,
         dst: &mut [Self::Item],
     ) -> Vec<Job<P>>
     where
-        P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>;
+        P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
+        Self::Item: Clone + for<'a> Deserialize<'a>,
+    {
+        let f = std::fs::File::open(checkpoint).unwrap();
+        let Checkpoint { dst: d, jobs } = serde_json::from_reader(f).unwrap();
+        dst.clone_from_slice(&d);
+        jobs
+    }
 
     fn write_checkpoint<P>(
         checkpoint: &str,
         dst: Vec<Self::Item>,
         jobs: Vec<Job<P>>,
     ) where
-        P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>;
+        P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
+        Self::Item: Serialize,
+    {
+        let c = Checkpoint { dst, jobs };
+        let f = std::fs::File::create(checkpoint).unwrap();
+        serde_json::to_writer_pretty(f, &c).unwrap();
+    }
 }
 
 pub(crate) struct Opt;
@@ -292,34 +307,14 @@ impl Drain for Opt {
     ) {
         dst[job.index] = Geom::Xyz(res.cart_geom.unwrap());
     }
-
-    fn load_checkpoint<P>(
-        _checkpoint: &str,
-        _dst: &mut [Self::Item],
-    ) -> Vec<Job<P>>
-    where
-        P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
-    {
-        todo!()
-    }
-
-    fn write_checkpoint<P>(
-        _checkpoint: &str,
-        _dst: Vec<Self::Item>,
-        _jobs: Vec<Job<P>>,
-    ) where
-        P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
-    {
-        todo!()
-    }
 }
 
 #[derive(Deserialize, Serialize)]
-struct Checkpoint<P>
+struct Checkpoint<P, T>
 where
     P: Program + Clone,
 {
-    dst: Vec<f64>,
+    dst: Vec<T>,
     jobs: Vec<Job<P>>,
 }
 
@@ -340,27 +335,6 @@ impl Drain for Single {
     ) {
         dst[job.index] += job.coeff * res.energy;
     }
-
-    /// load a checkpoint from the `checkpoint` file, storing the energies in
-    /// `dst` and returning the list of remaining jobs
-    fn load_checkpoint<P>(checkpoint: &str, dst: &mut [f64]) -> Vec<Job<P>>
-    where
-        P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
-    {
-        let f = std::fs::File::open(checkpoint).unwrap();
-        let Checkpoint { dst: d, jobs } = serde_json::from_reader(f).unwrap();
-        dst.copy_from_slice(&d);
-        jobs
-    }
-
-    fn write_checkpoint<P>(checkpoint: &str, dst: Vec<f64>, jobs: Vec<Job<P>>)
-    where
-        P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
-    {
-        let c = Checkpoint { dst, jobs };
-        let f = std::fs::File::create(checkpoint).unwrap();
-        serde_json::to_writer_pretty(f, &c).unwrap();
-    }
 }
 
 pub(crate) struct Both;
@@ -379,25 +353,5 @@ impl Drain for Both {
         res: ProgramResult,
     ) {
         dst[job.index] = res;
-    }
-
-    fn load_checkpoint<P>(
-        _checkpoint: &str,
-        _dst: &mut [Self::Item],
-    ) -> Vec<Job<P>>
-    where
-        P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
-    {
-        todo!()
-    }
-
-    fn write_checkpoint<P>(
-        _checkpoint: &str,
-        _dst: Vec<Self::Item>,
-        _jobs: Vec<Job<P>>,
-    ) where
-        P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
-    {
-        todo!()
     }
 }
