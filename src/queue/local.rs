@@ -62,7 +62,7 @@ impl<
         let mut file = File::create(filename).unwrap_or_else(|_| {
             panic!("failed to create submit script `{filename}`")
         });
-        write!(file, "{}", body).expect("failed to write submit script");
+        write!(file, "{body}").expect("failed to write submit script");
     }
 }
 

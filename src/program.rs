@@ -114,7 +114,7 @@ pub trait Program {
         let mut job_num = job_num;
         let mut jobs = Vec::new();
         for mol in moles {
-            let filename = format!("{dir}/job.{:08}", job_num);
+            let filename = format!("{dir}/job.{job_num:08}");
             job_num += 1;
             let mut job = Job::new(
                 Self::new(filename, tmpl.clone(), charge, mol.clone()),
@@ -160,7 +160,7 @@ impl<P: Program> Job<P> {
     /// `self.modtime` if there is an error accessing the metadata
     pub fn modtime(&self) -> SystemTime {
         let p = self.program.outfile();
-        if let Ok(meta) = std::fs::metadata(&p) {
+        if let Ok(meta) = std::fs::metadata(p) {
             meta.modified().unwrap()
         } else {
             self.modtime

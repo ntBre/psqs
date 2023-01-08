@@ -112,7 +112,7 @@ impl Program for Mopac {
             let param_file =
                 format!("{}/{}", self.param_dir.as_ref().unwrap(), s.finish());
             Self::write_params(params, &param_file);
-            write!(header, " external={}", param_file).unwrap();
+            write!(header, " external={param_file}").unwrap();
             self.param_file = Some(param_file);
         }
         if self.geom.is_xyz() {
@@ -166,10 +166,10 @@ Comment line 2
     fn associated_files(&self) -> Vec<String> {
         let fname = self.filename();
         let mut ret = vec![
-            format!("{}.mop", fname),
-            format!("{}.out", fname),
-            format!("{}.arc", fname),
-            format!("{}.aux", fname),
+            format!("{fname}.mop"),
+            format!("{fname}.out"),
+            format!("{fname}.arc"),
+            format!("{fname}.aux"),
         ];
         if let Some(f) = self.param_file.clone() {
             ret.push(f);
@@ -222,7 +222,7 @@ impl Mopac {
         let mut job_num = job_num;
         let mut jobs = Vec::new();
         for mol in moles {
-            let filename = format!("{dir}/job.{:08}", job_num);
+            let filename = format!("{dir}/job.{job_num:08}");
             job_num += 1;
             let mut job = Job::new(
                 Mopac::new_full(
@@ -247,11 +247,11 @@ impl Mopac {
         let mut file = match File::create(filename) {
             Ok(f) => f,
             Err(e) => {
-                eprintln!("failed to create {} with {}", filename, e);
+                eprintln!("failed to create {filename} with {e}");
                 std::process::exit(1);
             }
         };
-        write!(file, "{}", body).expect("failed to write params file");
+        write!(file, "{body}").expect("failed to write params file");
     }
 
     /// return the heat of formation from a MOPAC aux file in Hartrees.

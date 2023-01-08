@@ -196,7 +196,7 @@ impl Queue<Mopac> for TestQueue {
         }
         let mut file =
             File::create(filename).expect("failed to create params file");
-        write!(file, "{}", body).expect("failed to write params file");
+        write!(file, "{body}").expect("failed to write params file");
     }
 }
 

@@ -141,8 +141,8 @@ mkdir -p $TMPDIR
                 panic!("write_submit_script: failed to create {filename}");
             }
         };
-        write!(file, "{}", body).unwrap_or_else(|_| {
-            panic!("failed to write molpro input file: {}", filename)
+        write!(file, "{body}").unwrap_or_else(|_| {
+            panic!("failed to write molpro input file: {filename}")
         });
     }
 }
@@ -182,7 +182,7 @@ cd $WORKDIR
                 std::process::exit(1);
             }
         };
-        write!(file, "{}", body).expect("failed to write params file");
+        write!(file, "{body}").expect("failed to write params file");
     }
 }
 
@@ -225,7 +225,7 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
         let status = match Command::new("qstat").args(["-u", &user.1]).output()
         {
             Ok(status) => status,
-            Err(e) => panic!("failed to run squeue with {}", e),
+            Err(e) => panic!("failed to run squeue with {e}"),
         };
         String::from_utf8(status.stdout)
             .expect("failed to convert squeue output to String")

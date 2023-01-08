@@ -149,7 +149,7 @@ impl Program for Molpro {
             Ok(f) => f,
             Err(e) => panic!("failed to create {filename} with {e}"),
         };
-        write!(file, "{}", body).expect("failed to write input file");
+        write!(file, "{body}").expect("failed to write input file");
     }
 
     fn read_output(filename: &str) -> Result<ProgramResult, ProgramError> {

@@ -110,7 +110,7 @@ where
         let base = path.file_stem().unwrap().to_str().unwrap();
         {
             let ext = path.extension().unwrap().to_str().unwrap();
-            let inp_file = format!("{}/{}_redo.{}", dir, base, ext);
+            let inp_file = format!("{dir}/{base}_redo.{ext}");
             match std::fs::copy(filename, &inp_file) {
                 Ok(_) => (),
                 Err(e) => {
@@ -119,7 +119,7 @@ where
             };
         }
         // nothing but the copy needs the name with extension
-        let inp_name = format!("{}/{}_redo", dir, base);
+        let inp_name = format!("{dir}/{base}_redo");
         let pbs_file = format!("{}/{}_redo.{}", dir, base, Self::SCRIPT_EXT);
         self.write_submit_script(&[inp_name.clone()], &pbs_file);
         let job_id = self.submit(&pbs_file);

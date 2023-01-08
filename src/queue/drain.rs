@@ -175,8 +175,7 @@ pub(crate) trait Drain {
                             Some(n) => *n,
                             None => {
                                 eprintln!(
-                                    "failed to find {} in slurm_jobs",
-                                    job_name
+                                    "failed to find {job_name} in slurm_jobs"
                                 );
                                 1
                             }
@@ -185,7 +184,7 @@ pub(crate) trait Drain {
                         if count == 0 {
                             // delete the submit script and output file
                             dump.send(job_name.to_string());
-                            dump.send(format!("{}.out", job_name));
+                            dump.send(format!("{job_name}.out"));
                         }
                     }
                     Err(e) => {
@@ -261,11 +260,11 @@ pub(crate) trait Drain {
             }
             if cur_jobs.is_empty() && out_of_jobs {
                 dump.shutdown();
-                eprintln!("{}", time);
+                eprintln!("{time}");
                 return Ok(job_time);
             }
             if finished == 0 {
-                eprintln!("{} jobs remaining", remaining);
+                eprintln!("{remaining} jobs remaining");
                 qstat = queue.status();
                 let d = time::Duration::from_secs(queue.sleep_int() as u64);
                 time.sleeping += d;
