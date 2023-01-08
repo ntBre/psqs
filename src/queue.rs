@@ -267,6 +267,8 @@ where
         self.drain(dir, jobs, dst, check_int)
     }
 
+    /// run the single-point energy calculations in `jobs`, storing the results
+    /// in `dst`. if `check_int` > 0, write checkpoint files at that interval
     fn drain(
         &self,
         dir: &str,
