@@ -281,7 +281,7 @@ pub(crate) trait Drain {
                 };
                 cur_jobs.extend(
                     jobs_init
-                        [(cn * queue.chunk_size()).max(jobs_init.len() - 1)..]
+                        [(cn * queue.chunk_size()).min(jobs_init.len() - 1)..]
                         .to_vec(),
                 );
                 Self::write_checkpoint("chk.json", dst.to_vec(), cur_jobs);
