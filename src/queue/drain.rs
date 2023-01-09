@@ -108,6 +108,7 @@ pub(crate) trait Drain {
                 let works: Vec<_> = chunks
                     .borrow_mut()
                     .take(job_limit - cur_jobs.len() / queue.chunk_size())
+                    // NOTE par_bridge does NOT preserve order
                     .par_bridge()
                     .map(|(chunk_num, jobs)| {
                         let now = std::time::Instant::now();
@@ -144,7 +145,12 @@ pub(crate) trait Drain {
                     time.submitting_script += ss;
                     qstat.insert(job_id);
                     cur_jobs.extend(jobs);
-                    last_chunk = Some(cn);
+                    // necessary because par_bridge may swap order
+                    if let Some(n) = last_chunk {
+                        last_chunk = Some(usize::max(n, cn))
+                    } else {
+                        last_chunk = Some(cn);
+                    }
                 }
             }
 
@@ -264,7 +270,7 @@ pub(crate) trait Drain {
                 return Ok(job_time);
             }
             if finished == 0 {
-		let date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+                let date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
                 eprintln!("[iter {iter} {date}] {remaining} jobs remaining");
                 qstat = queue.status();
                 let d = time::Duration::from_secs(queue.sleep_int() as u64);
@@ -280,8 +286,8 @@ pub(crate) trait Drain {
                     None => 0,
                 };
                 cur_jobs.extend(
-                    jobs_init
-                        [(cn * queue.chunk_size()).min(jobs_init.len() - 1)..]
+                    jobs_init[(cn * queue.chunk_size())
+                        .min(jobs_init.len())..]
                         .to_vec(),
                 );
                 Self::write_checkpoint("chk.json", dst.to_vec(), cur_jobs);
