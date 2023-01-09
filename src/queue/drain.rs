@@ -264,7 +264,8 @@ pub(crate) trait Drain {
                 return Ok(job_time);
             }
             if finished == 0 {
-                eprintln!("{remaining} jobs remaining");
+		let date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+                eprintln!("[iter {iter} {date}] {remaining} jobs remaining");
                 qstat = queue.status();
                 let d = time::Duration::from_secs(queue.sleep_int() as u64);
                 time.sleeping += d;
