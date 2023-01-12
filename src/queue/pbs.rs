@@ -20,6 +20,7 @@ pub struct Pbs {
     job_limit: usize,
     sleep_int: usize,
     dir: &'static str,
+    no_del: bool,
 }
 
 impl Pbs {
@@ -28,12 +29,14 @@ impl Pbs {
         job_limit: usize,
         sleep_int: usize,
         dir: &'static str,
+        no_del: bool,
     ) -> Self {
         Self {
             chunk_size,
             job_limit,
             sleep_int,
             dir,
+            no_del,
         }
     }
 }
@@ -45,6 +48,7 @@ impl Default for Pbs {
             job_limit: 1600,
             sleep_int: 5,
             dir: "inp",
+            no_del: false,
         }
     }
 }
@@ -186,8 +190,9 @@ cd $WORKDIR
     }
 }
 
-impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
-    for Pbs
+impl<P> SubQueue<P> for Pbs
+where
+    P: Program + Clone + Serialize + for<'a> Deserialize<'a>,
 {
     fn submit_command(&self) -> &str {
         "qsub"
@@ -242,5 +247,9 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
             ret.insert(fields[0].to_string());
         }
         ret
+    }
+
+    fn no_del(&self) -> bool {
+        self.no_del
     }
 }

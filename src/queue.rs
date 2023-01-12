@@ -88,6 +88,9 @@ where
     /// return a HashSet of jobs found in the queue based on the output of
     /// `stat_cmd`
     fn status(&self) -> HashSet<String>;
+
+    /// return `true` if all output files should be preserved
+    fn no_del(&self) -> bool;
 }
 
 pub trait Queue<P>: SubQueue<P> + Submit<P>

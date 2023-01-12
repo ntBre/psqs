@@ -19,6 +19,7 @@ pub struct Slurm {
     job_limit: usize,
     sleep_int: usize,
     dir: &'static str,
+    no_del: bool,
 }
 
 impl Slurm {
@@ -27,12 +28,14 @@ impl Slurm {
         job_limit: usize,
         sleep_int: usize,
         dir: &'static str,
+        no_del: bool,
     ) -> Self {
         Self {
             chunk_size,
             job_limit,
             sleep_int,
             dir,
+            no_del,
         }
     }
 }
@@ -44,6 +47,7 @@ impl Default for Slurm {
             job_limit: 1600,
             sleep_int: 5,
             dir: "inp",
+            no_del: false,
         }
     }
 }
@@ -112,8 +116,9 @@ hostname\n",
     }
 }
 
-impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
-    for Slurm
+impl<P> SubQueue<P> for Slurm
+where
+    P: Program + Clone + Serialize + for<'a> Deserialize<'a>,
 {
     fn submit_command(&self) -> &str {
         "sbatch"
@@ -172,5 +177,9 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
             }
         }
         ret
+    }
+
+    fn no_del(&self) -> bool {
+        self.no_del
     }
 }

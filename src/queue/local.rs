@@ -98,4 +98,8 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
     fn status(&self) -> HashSet<String> {
         todo!();
     }
+
+    fn no_del(&self) -> bool {
+        false
+    }
 }

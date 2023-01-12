@@ -74,7 +74,7 @@ pub(crate) trait Drain {
 
         let mut out_of_jobs = false;
 
-        let dump = Dump::new();
+        let dump = Dump::new(queue.no_del());
         let mut time = timer::Timer::default();
 
         let mut qstat = HashSet::<String>::new();

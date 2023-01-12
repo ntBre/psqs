@@ -230,6 +230,10 @@ impl SubQueue<Mopac> for TestQueue {
     fn status(&self) -> HashSet<String> {
         todo!()
     }
+
+    fn no_del(&self) -> bool {
+        false
+    }
 }
 
 #[test]
