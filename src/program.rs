@@ -1,4 +1,4 @@
-use std::time::SystemTime;
+use std::{str::FromStr, time::SystemTime};
 
 use serde::{Deserialize, Serialize};
 use symm::Atom;
@@ -50,6 +50,22 @@ impl Template {
         Self {
             header: s.to_string(),
         }
+    }
+}
+
+impl From<String> for Template {
+    fn from(header: String) -> Self {
+        Self { header }
+    }
+}
+
+impl FromStr for Template {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self {
+            header: s.to_string(),
+        })
     }
 }
 
