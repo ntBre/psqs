@@ -3,6 +3,10 @@ use std::{
     thread::{self, JoinHandle},
 };
 
+lazy_static::lazy_static! {
+    static ref DUMP_DEBUG: bool = std::env::var("DUMP_DEBUG").is_ok();
+}
+
 /// a garbage heap that spawns another thread and sends filenames to be deleted.
 /// the `None` variant is used when no_del is enabled to turn every method into
 /// a no op
@@ -35,7 +39,9 @@ impl Dump {
                 }
                 let e = std::fs::remove_file(&file);
                 if let Err(e) = e {
-                    eprintln!("failed to remove {file} with {e}");
+                    if *DUMP_DEBUG {
+                        eprintln!("failed to remove {file} with {e}");
+                    }
                 }
             }
         });
