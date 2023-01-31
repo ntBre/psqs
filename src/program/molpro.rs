@@ -162,7 +162,7 @@ impl Program for Molpro {
         };
         lazy_static! {
             static ref PANIC: Regex = Regex::new("(?i)panic").unwrap();
-            static ref ERROR: Regex = Regex::new("(?i)error").unwrap();
+            static ref ERROR: Regex = Regex::new(r#"(?i)\berror\b"#).unwrap();
             static ref GEOM: Regex = Regex::new("Current geometry").unwrap();
             static ref BLANK: Regex = Regex::new(r"^\s*$").unwrap();
             static ref TIME: Regex = Regex::new(r"^ REAL TIME").unwrap();

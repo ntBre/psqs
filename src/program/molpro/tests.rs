@@ -180,4 +180,19 @@ mod read_output {
 
         assert_eq!(got, want);
     }
+
+    #[test]
+    fn error() {
+        let got = Molpro::read_output("testfiles/molpro/error");
+        let Err(e) = got else {
+	    panic!("expected error got {got:?}");
+	};
+        assert!(e.is_error_in_output());
+    }
+
+    #[test]
+    fn ignore_error() {
+        let got = Molpro::read_output("testfiles/molpro/ignore_error");
+        assert!(got.is_ok());
+    }
 }
