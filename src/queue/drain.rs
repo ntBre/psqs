@@ -2,7 +2,9 @@ use core::time;
 use std::{
     borrow::BorrowMut,
     collections::{HashMap, HashSet},
+    iter::{Enumerate, Fuse, Peekable},
     marker::{Send, Sync},
+    slice::ChunksMut,
     thread,
 };
 
@@ -105,53 +107,17 @@ pub(crate) trait Drain {
                 out_of_jobs = true;
             }
             if !out_of_jobs {
-                let works: Vec<_> = chunks
-                    .borrow_mut()
-                    .take(job_limit - cur_jobs.len() / queue.chunk_size())
-                    // NOTE par_bridge does NOT preserve order
-                    .par_bridge()
-                    .map(|(chunk_num, jobs)| {
-                        let now = std::time::Instant::now();
-                        let (slurm_jobs, wi, ws, ss) = queue.build_chunk(
-                            dir,
-                            jobs,
-                            chunk_num,
-                            self.procedure(),
-                        );
-                        let job_id = jobs[0].job_id.clone();
-                        let elapsed = now.elapsed();
-                        if DEBUG {
-                            eprintln!(
-                                "submitted chunk {} after {:.1} s",
-                                chunk_num,
-                                elapsed.as_millis() as f64 / 1000.0
-                            );
-                        }
-                        (
-                            jobs.to_vec(),
-                            slurm_jobs,
-                            job_id,
-                            wi,
-                            ws,
-                            ss,
-                            chunk_num,
-                        )
-                    })
-                    .collect();
-                for (jobs, sj, job_id, wi, ws, ss, cn) in works {
-                    slurm_jobs.extend(sj);
-                    time.writing_input += wi;
-                    time.writing_script += ws;
-                    time.submitting_script += ss;
-                    qstat.insert(job_id);
-                    cur_jobs.extend(jobs);
-                    // necessary because par_bridge may swap order
-                    if let Some(n) = last_chunk {
-                        last_chunk = Some(usize::max(n, cn))
-                    } else {
-                        last_chunk = Some(cn);
-                    }
-                }
+                self.receive_jobs(
+                    &mut chunks,
+                    job_limit,
+                    &mut cur_jobs,
+                    queue,
+                    dir,
+                    &mut slurm_jobs,
+                    &mut time,
+                    &mut qstat,
+                    &mut last_chunk,
+                );
             }
 
             // collect output
@@ -286,8 +252,7 @@ pub(crate) trait Drain {
                     None => 0,
                 };
                 cur_jobs.extend(
-                    jobs_init[(cn * queue.chunk_size())
-                        .min(jobs_init.len())..]
+                    jobs_init[(cn * queue.chunk_size()).min(jobs_init.len())..]
                         .to_vec(),
                 );
                 Self::write_checkpoint("chk.json", dst.to_vec(), cur_jobs);
@@ -323,6 +288,62 @@ pub(crate) trait Drain {
         let c = Checkpoint { dst, jobs };
         let f = std::fs::File::create(checkpoint).unwrap();
         serde_json::to_writer_pretty(f, &c).unwrap();
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn receive_jobs<P, Q>(
+        &self,
+        chunks: &mut Peekable<Fuse<Enumerate<ChunksMut<Job<P>>>>>,
+        job_limit: usize,
+        cur_jobs: &mut Vec<Job<P>>,
+        queue: &Q,
+        dir: &str,
+        slurm_jobs: &mut HashMap<String, usize>,
+        time: &mut timer::Timer,
+        qstat: &mut HashSet<String>,
+        last_chunk: &mut Option<usize>,
+    ) where
+        Self: Sync,
+        P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
+        Q: Queue<P> + ?Sized + Sync,
+        <Self as Drain>::Item: Clone + Serialize,
+    {
+        use rayon::prelude::*;
+        let works: Vec<_> = chunks
+            .borrow_mut()
+            .take(job_limit - cur_jobs.len() / queue.chunk_size())
+            // NOTE par_bridge does NOT preserve order
+            .par_bridge()
+            .map(|(chunk_num, jobs)| {
+                let now = std::time::Instant::now();
+                let (slurm_jobs, wi, ws, ss) =
+                    queue.build_chunk(dir, jobs, chunk_num, self.procedure());
+                let job_id = jobs[0].job_id.clone();
+                let elapsed = now.elapsed();
+                if DEBUG {
+                    eprintln!(
+                        "submitted chunk {} after {:.1} s",
+                        chunk_num,
+                        elapsed.as_millis() as f64 / 1000.0
+                    );
+                }
+                (jobs.to_vec(), slurm_jobs, job_id, wi, ws, ss, chunk_num)
+            })
+            .collect();
+        for (jobs, sj, job_id, wi, ws, ss, cn) in works {
+            slurm_jobs.extend(sj);
+            time.writing_input += wi;
+            time.writing_script += ws;
+            time.submitting_script += ss;
+            qstat.insert(job_id);
+            cur_jobs.extend(jobs);
+            // necessary because par_bridge may swap order
+            if let Some(n) = *last_chunk {
+                *last_chunk = Some(usize::max(n, cn))
+            } else {
+                *last_chunk = Some(cn);
+            }
+        }
     }
 }
 
