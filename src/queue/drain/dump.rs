@@ -26,10 +26,10 @@ pub(crate) enum Dump {
 }
 
 #[inline]
-fn nil_handler(_file: &String, _e: std::io::Result<()>) {}
+fn nil_handler(_file: &str, _e: std::io::Result<()>) {}
 
 #[inline]
-fn debug_handler(file: &String, e: std::io::Result<()>) {
+fn debug_handler(file: &str, e: std::io::Result<()>) {
     if let Err(e) = e {
         eprintln!("failed to remove {file} with {e}");
     }
@@ -55,7 +55,7 @@ impl Dump {
             }
             // try to receive up to MAX_FILES at once, then par_iter over the
             // received files. loop to continue the process
-            let mut files = Vec::new();
+            let mut files: Vec<String> = Vec::new();
             while let Ok(v) = receiver.try_recv() {
                 files.push(v);
                 if files.len() >= MAX_FILES {
@@ -64,7 +64,7 @@ impl Dump {
             }
             use rayon::prelude::*;
             files.par_iter().for_each(|file| {
-                err_handler(file, std::fs::remove_file(&file));
+                err_handler(file, std::fs::remove_file(file));
             });
         });
 
