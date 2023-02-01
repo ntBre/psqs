@@ -90,6 +90,11 @@ pub(crate) trait Drain {
         // iterator. another option would be to consume the iterator and rebuild
         // it when writing the checkpoints
         let jobs_init = jobs.clone();
+        let total_jobs = jobs.len();
+        // for fast jobs, it may be necessary to stop and clean up even if
+        // finished != 0. this is used to signal that case
+        let mut cleanup_intervals =
+            (0..total_jobs).step_by(job_limit).peekable();
         let mut chunks = jobs
             .chunks_mut(queue.chunk_size())
             .enumerate()
@@ -236,12 +241,13 @@ pub(crate) trait Drain {
                 return Ok(job_time);
             }
             if finished == 0 {
-                let date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
-                eprintln!("[iter {iter} {date}] {remaining} jobs remaining");
+                wait(queue, &mut time, iter, remaining);
                 qstat = queue.status();
-                let d = time::Duration::from_secs(queue.sleep_int() as u64);
-                time.sleeping += d;
-                thread::sleep(d);
+            } else if total_jobs - remaining
+                > *cleanup_intervals.peek().unwrap_or(&total_jobs)
+            {
+                wait(queue, &mut time, iter, remaining);
+                cleanup_intervals.next();
             }
             if check_int > 0 && check_int % iter == 0 {
                 let mut cur_jobs = cur_jobs.clone();
@@ -345,6 +351,18 @@ pub(crate) trait Drain {
             }
         }
     }
+}
+
+fn wait<P, Q>(queue: &Q, time: &mut timer::Timer, iter: usize, remaining: usize)
+where
+    P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
+    Q: Queue<P> + ?Sized + Sync,
+{
+    let date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+    eprintln!("[iter {iter} {date}] {remaining} jobs remaining");
+    let d = time::Duration::from_secs(queue.sleep_int() as u64);
+    time.sleeping += d;
+    thread::sleep(d);
 }
 
 pub(crate) struct Opt;
