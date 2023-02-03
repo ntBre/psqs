@@ -31,6 +31,7 @@ mod resub;
 mod timer;
 
 use lazy_static::lazy_static;
+use libc::{timeval, RUSAGE_SELF};
 use resub::Resub;
 use serde::{Deserialize, Serialize};
 
@@ -353,13 +354,33 @@ pub(crate) trait Drain {
     }
 }
 
+fn to_secs(time: timeval) -> f64 {
+    time.tv_sec as f64 + time.tv_usec as f64 / 1e6
+}
+
+/// return the CPU time used by the current process in seconds
+fn get_cpu_time() -> f64 {
+    unsafe {
+        let mut rusage = std::mem::MaybeUninit::uninit();
+        let res = libc::getrusage(RUSAGE_SELF, rusage.as_mut_ptr());
+        if res != 0 {
+            return 0.0;
+        }
+        let rusage = rusage.assume_init();
+        to_secs(rusage.ru_stime) + to_secs(rusage.ru_utime)
+    }
+}
+
 fn wait<P, Q>(queue: &Q, time: &mut timer::Timer, iter: usize, remaining: usize)
 where
     P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
     Q: Queue<P> + ?Sized + Sync,
 {
     let date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
-    eprintln!("[iter {iter} {date}] {remaining} jobs remaining");
+    eprintln!(
+        "[iter {iter} {date} {:.1} CPU s] {remaining} jobs remaining",
+        get_cpu_time()
+    );
     let d = time::Duration::from_secs(queue.sleep_int() as u64);
     time.sleeping += d;
     thread::sleep(d);
