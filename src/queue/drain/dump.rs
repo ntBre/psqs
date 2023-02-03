@@ -40,32 +40,23 @@ impl Dump {
         if no_del {
             return Self::None;
         }
-        let (sender, receiver) = mpsc::channel();
+        let (sender, receiver) = mpsc::channel::<String>();
         let (signal, exit) = mpsc::sync_channel(0);
-        const MAX_FILES: usize = 100;
+
         // check this condition once before the loop
         let err_handler = if *DUMP_DEBUG {
             debug_handler
         } else {
             nil_handler
         };
-        let handle = thread::spawn(move || loop {
-            if exit.try_recv().is_ok() {
-                return;
-            }
-            // try to receive up to MAX_FILES at once, then par_iter over the
-            // received files. loop to continue the process
-            let mut files: Vec<String> = Vec::new();
-            while let Ok(v) = receiver.try_recv() {
-                files.push(v);
-                if files.len() >= MAX_FILES {
-                    break;
+
+        let handle = thread::spawn(move || {
+            for file in receiver {
+                if exit.try_recv().is_ok() {
+                    return;
                 }
+                err_handler(&file, std::fs::remove_file(&file));
             }
-            use rayon::prelude::*;
-            files.par_iter().for_each(|file| {
-                err_handler(file, std::fs::remove_file(file));
-            });
         });
 
         Self::Real {
