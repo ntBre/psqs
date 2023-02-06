@@ -181,6 +181,9 @@ fn test_read_output() {
     let f = String::from("testfiles/noaux");
     let got = Mopac::read_output(&f);
     assert_eq!(got.err().unwrap(), ProgramError::FileNotFound(f + ".aux"));
+
+    let got = Mopac::read_output("testfiles/bad");
+    assert!(got.is_ok());
 }
 
 /// minimal queue for testing general submission
