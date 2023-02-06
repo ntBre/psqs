@@ -182,8 +182,10 @@ fn test_read_output() {
     let got = Mopac::read_output(&f);
     assert_eq!(got.err().unwrap(), ProgramError::FileNotFound(f + ".aux"));
 
+    // this is passing but for some reason on maple it's throwing an error
     let got = Mopac::read_output("testfiles/bad");
     assert!(got.is_ok());
+    assert!(got.unwrap().cart_geom.is_some());
 }
 
 /// minimal queue for testing general submission
