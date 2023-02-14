@@ -340,7 +340,7 @@ impl Mopac {
             }
         }
         let cart_geom = if coords.is_empty() {
-            None
+            return Err(ProgramError::GeomNotFound(auxfile));
         } else {
             let mut ret = Vec::new();
             for (c, coord) in coords.chunks_exact(3).enumerate() {

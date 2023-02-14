@@ -21,6 +21,7 @@ pub enum ProgramError {
     ErrorInOutput(String),
     EnergyNotFound(String),
     EnergyParseError(String),
+    GeomNotFound(String),
 }
 
 impl ProgramError {
