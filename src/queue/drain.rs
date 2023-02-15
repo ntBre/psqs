@@ -250,7 +250,7 @@ pub(crate) trait Drain {
                 wait(queue, &mut time, iter, remaining);
                 cleanup_intervals.next();
             }
-            if check_int > 0 && check_int % iter == 0 {
+            if check_int > 0 && iter % check_int == 0 {
                 let mut cur_jobs = cur_jobs.clone();
                 // +1 because after the first chunk (chunk_num = 0) is written,
                 // we want to slice from the next chunk on
