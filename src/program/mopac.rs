@@ -276,6 +276,7 @@ impl Mopac {
         enum State {
             Geom,
             Labels,
+            Done,
             None,
         }
         /// don't look for these after they've been found
@@ -331,6 +332,7 @@ impl Mopac {
                 state = State::Geom;
                 guard.atom = true;
             } else if state == State::Geom && CHARGE.is_match(&line) {
+                state = State::Done;
                 break;
             } else if state == State::Geom {
                 coords.extend(
@@ -339,21 +341,20 @@ impl Mopac {
                 );
             }
         }
-        let cart_geom = if coords.is_empty() {
+        if state != State::Done {
             return Err(ProgramError::GeomNotFound(auxfile));
-        } else {
-            let mut ret = Vec::new();
-            for (c, coord) in coords.chunks_exact(3).enumerate() {
-                ret.push(Atom::new_from_label(
-                    &labels[c], coord[0], coord[1], coord[2],
-                ));
-            }
-            Some(ret)
-        };
+        }
+        let ret = coords
+            .chunks_exact(3)
+            .zip(labels)
+            .map(|(coord, l)| {
+                Atom::new_from_label(&l, coord[0], coord[1], coord[2])
+            })
+            .collect();
         if let Some(energy) = energy {
             Ok(ProgramResult {
                 energy,
-                cart_geom,
+                cart_geom: Some(ret),
                 time,
             })
         } else {
