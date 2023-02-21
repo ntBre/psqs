@@ -91,10 +91,10 @@ pub(crate) trait Drain {
         // iterator. another option would be to consume the iterator and rebuild
         // it when writing the checkpoints
         let jobs_init = if check_int > 0 {
-	    jobs.clone()
-	} else {
-	    Vec::new()
-	};
+            jobs.clone()
+        } else {
+            Vec::new()
+        };
         let total_jobs = jobs.len();
         // for fast jobs, it may be necessary to stop and clean up even if
         // finished != 0. this is used to signal that case
