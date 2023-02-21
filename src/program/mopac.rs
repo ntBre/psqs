@@ -205,11 +205,11 @@ impl Mopac {
         }
     }
 
-    /// Build the jobs described by `moles` in memory, but don't write any of their
-    /// files yet
+    /// Build the jobs described by `moles` in memory, but don't write any of
+    /// their files yet
     #[allow(clippy::too_many_arguments)]
     pub fn build_jobs(
-        moles: &Vec<Geom>,
+        moles: Vec<Geom>,
         params: Option<&Params>,
         dir: &'static str,
         start_index: usize,
@@ -228,7 +228,7 @@ impl Mopac {
                 Mopac::new_full(
                     filename,
                     params.cloned(),
-                    mol.clone(),
+                    mol,
                     charge,
                     tmpl.clone(),
                 ),
