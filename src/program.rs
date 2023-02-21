@@ -116,7 +116,7 @@ pub trait Program {
     /// Build the jobs described by `moles` in memory, but don't write any of
     /// their files yet
     fn build_jobs(
-        moles: &Vec<Geom>,
+        moles: Vec<Geom>,
         dir: &'static str,
         start_index: usize,
         coeff: f64,
