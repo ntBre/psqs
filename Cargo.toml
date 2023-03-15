@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 lazy_static = "1.4.0"
-nalgebra = { version = "0.31.1", features = ["serde-serialize"] }
+nalgebra = { version = "0.32.2", features = ["serde-serialize"] }
 rayon = "1.5.3"
 regex = "1.5.5"
 symm = { git = "https://github.com/ntBre/symm" }
