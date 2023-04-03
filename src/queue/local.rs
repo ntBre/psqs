@@ -42,14 +42,14 @@ impl<P> Submit<P> for Local where
 {
 }
 
-impl<
-        P: Program
-            + Clone
-            + Send
-            + std::marker::Sync
-            + Serialize
-            + for<'a> Deserialize<'a>,
-    > Queue<P> for Local
+impl<P> Queue<P> for Local
+where
+    P: Program
+        + Clone
+        + Send
+        + std::marker::Sync
+        + Serialize
+        + for<'a> Deserialize<'a>,
 {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
         use std::fmt::Write;
@@ -63,6 +63,10 @@ impl<
             panic!("failed to create submit script `{filename}`")
         });
         write!(file, "{body}").expect("failed to write submit script");
+    }
+
+    fn default_submit_script(&self) -> String {
+        todo!()
     }
 }
 

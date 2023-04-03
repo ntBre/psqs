@@ -20,6 +20,7 @@ pub struct Slurm {
     sleep_int: usize,
     dir: &'static str,
     no_del: bool,
+    template: Option<String>,
 }
 
 impl Slurm {
@@ -29,6 +30,7 @@ impl Slurm {
         sleep_int: usize,
         dir: &'static str,
         no_del: bool,
+        template: Option<String>,
     ) -> Self {
         Self {
             chunk_size,
@@ -36,18 +38,7 @@ impl Slurm {
             sleep_int,
             dir,
             no_del,
-        }
-    }
-}
-
-impl Default for Slurm {
-    fn default() -> Self {
-        Self {
-            chunk_size: 128,
-            job_limit: 1600,
-            sleep_int: 5,
-            dir: "inp",
-            no_del: false,
+            template,
         }
     }
 }
@@ -59,16 +50,9 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> Submit<P>
 
 impl Queue<Molpro> for Slurm {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
-        let mut body = format!(
-            "#!/bin/bash
-#SBATCH --job-name={filename}
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH -o {filename}.out
-#SBATCH --no-requeue
-#SBATCH --mem=8gb
-"
-        );
+        let mut body = self.template.clone().unwrap_or_else(|| {
+            <Self as Queue<Molpro>>::default_submit_script(self)
+        });
         for f in infiles {
             body.push_str(&format!("/home/qc/bin/molpro2020.sh 1 1 {f}.inp\n"));
         }
@@ -83,23 +67,25 @@ impl Queue<Molpro> for Slurm {
             panic!("failed to write molpro input file: {filename}")
         });
     }
+
+    fn default_submit_script(&self) -> String {
+        "#!/bin/bash
+#SBATCH --job-name={{.filename}}
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH -o {{.filename}}.out
+#SBATCH --no-requeue
+#SBATCH --mem=8gb
+"
+        .to_owned()
+    }
 }
 
 impl Queue<Mopac> for Slurm {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
-        let mut body = format!(
-            "#!/bin/bash
-#SBATCH --job-name=semp
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH -o {filename}.out
-#SBATCH --no-requeue
-#SBATCH --mem=1gb
-export LD_LIBRARY_PATH=/home/qc/mopac2016/
-echo $SLURM_JOB_ID
-date
-hostname\n",
-        );
+        let mut body = self.template.clone().unwrap_or_else(|| {
+            <Self as Queue<Mopac>>::default_submit_script(self)
+        });
         for f in infiles {
             body.push_str(&format!(
                 "/home/qc/mopac2016/MOPAC2016.exe {f}.mop\n"
@@ -113,6 +99,21 @@ hostname\n",
             }
         };
         write!(file, "{body}").expect("failed to write params file");
+    }
+
+    fn default_submit_script(&self) -> String {
+        "#!/bin/bash
+#SBATCH --job-name=semp
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH -o {{.filename}}.out
+#SBATCH --no-requeue
+#SBATCH --mem=1gb
+export LD_LIBRARY_PATH=/home/qc/mopac2016/
+echo $SLURM_JOB_ID
+date
+hostname\n"
+            .to_owned()
     }
 }
 

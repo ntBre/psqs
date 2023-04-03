@@ -21,6 +21,7 @@ pub struct Pbs {
     sleep_int: usize,
     dir: &'static str,
     no_del: bool,
+    template: Option<String>,
 }
 
 impl Pbs {
@@ -30,6 +31,7 @@ impl Pbs {
         sleep_int: usize,
         dir: &'static str,
         no_del: bool,
+        template: Option<String>,
     ) -> Self {
         Self {
             chunk_size,
@@ -37,18 +39,7 @@ impl Pbs {
             sleep_int,
             dir,
             no_del,
-        }
-    }
-}
-
-impl Default for Pbs {
-    fn default() -> Self {
-        Self {
-            chunk_size: 128,
-            job_limit: 1600,
-            sleep_int: 5,
-            dir: "inp",
-            no_del: false,
+            template,
         }
     }
 }
@@ -95,7 +86,11 @@ where
             Ok(s) => {
                 let raw =
                     std::str::from_utf8(&s.stdout).unwrap().trim().to_string();
-                return raw.split_whitespace().last().unwrap().to_string();
+                return raw
+                    .split_whitespace()
+                    .last()
+                    .unwrap_or_default()
+                    .to_string();
             }
             Err(e) => panic!("{e:?}"),
         };
@@ -106,30 +101,18 @@ impl Queue<Molpro> for Pbs
 where
     Molpro: Serialize + for<'a> Deserialize<'a>,
 {
+    /// An example of `self.template` should look like
+    ///
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
         let path = Path::new(filename);
         let basename = path.file_name().unwrap();
-        let mut body = format!(
-            "#!/bin/sh
-#PBS -N {basename:?}
-#PBS -S /bin/bash
-#PBS -j oe
-#PBS -o {basename:?}.out
-#PBS -W umask=022
-#PBS -l walltime=9999:00:00
-#PBS -l ncpus=1
-#PBS -l mem=8gb
-#PBS -q workq
-
-module load openpbs molpro
-
-export WORKDIR=$PBS_O_WORKDIR
-export TMPDIR=/tmp/$USER/$PBS_JOBID
-cd $WORKDIR
-mkdir -p $TMPDIR
-
-"
-        );
+        let mut body = self
+            .template
+            .clone()
+            .unwrap_or_else(|| {
+                <Self as Queue<Molpro>>::default_submit_script(self)
+            })
+            .replace("{{.basename}}", basename.to_str().unwrap());
         {
             use std::fmt::Write;
             for f in infiles {
@@ -149,31 +132,44 @@ mkdir -p $TMPDIR
             panic!("failed to write molpro input file: {filename}")
         });
     }
-}
 
-impl Queue<Mopac> for Pbs {
-    fn write_submit_script(&self, infiles: &[String], filename: &str) {
-        let path = Path::new(filename);
-        let basename = path.file_name().unwrap();
-        let mut body = format!(
-            "#!/bin/sh
-#PBS -N {basename:?}
+    fn default_submit_script(&self) -> String {
+        "#!/bin/sh
+#PBS -N {{.basename}}
 #PBS -S /bin/bash
 #PBS -j oe
-#PBS -o {filename}.out
+#PBS -o {{.basename}}.out
 #PBS -W umask=022
 #PBS -l walltime=9999:00:00
 #PBS -l ncpus=1
-#PBS -l mem=1gb
+#PBS -l mem=8gb
 #PBS -q workq
 
-module load openpbs
+module load openpbs molpro
 
 export WORKDIR=$PBS_O_WORKDIR
+export TMPDIR=/tmp/$USER/$PBS_JOBID
 cd $WORKDIR
+mkdir -p $TMPDIR
+"
+        .to_owned()
+    }
+}
 
-",
-        );
+impl Queue<Mopac> for Pbs {
+    /// An example of `self.template` should look like
+    ///
+    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+        let path = Path::new(filename);
+        let basename = path.file_name().unwrap();
+        let mut body = self
+            .template
+            .clone()
+            .unwrap_or_else(|| {
+                <Self as Queue<Mopac>>::default_submit_script(self)
+            })
+            .replace("{{.basename}}", basename.to_str().unwrap())
+            .replace("{{.filename}}", filename);
         for f in infiles {
             body.push_str(&format!(
                 "/ddn/home1/r2518/Packages/mopac/build/mopac {f}.mop\n"
@@ -187,6 +183,27 @@ cd $WORKDIR
             }
         };
         write!(file, "{body}").expect("failed to write params file");
+    }
+
+    fn default_submit_script(&self) -> String {
+        "#!/bin/sh
+#PBS -N {{.basename}}
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -o {{.filename}}.out
+#PBS -W umask=022
+#PBS -l walltime=9999:00:00
+#PBS -l ncpus=1
+#PBS -l mem=1gb
+#PBS -q workq
+
+module load openpbs
+
+export WORKDIR=$PBS_O_WORKDIR
+cd $WORKDIR
+
+"
+        .to_owned()
     }
 }
 

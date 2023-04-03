@@ -203,6 +203,10 @@ impl Queue<Mopac> for TestQueue {
             File::create(filename).expect("failed to create params file");
         write!(file, "{body}").expect("failed to write params file");
     }
+
+    fn default_submit_script(&self) -> String {
+        todo!()
+    }
 }
 
 impl SubQueue<Mopac> for TestQueue {

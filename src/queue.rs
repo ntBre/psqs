@@ -102,6 +102,8 @@ where
         + Serialize
         + for<'a> Deserialize<'a>,
 {
+    fn default_submit_script(&self) -> String;
+
     fn write_submit_script(&self, infiles: &[String], filename: &str);
 
     /// take a name of a Program input file with the extension attached, replace
