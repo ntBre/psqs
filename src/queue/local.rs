@@ -28,11 +28,18 @@ impl Default for Local {
 }
 
 impl Local {
-    pub fn new(dir: &str, chunk_size: usize, mopac: &'static str) -> Self {
+    pub fn new(
+        chunk_size: usize,
+        _job_limit: usize,
+        _sleep_int: usize,
+        dir: &'static str,
+        _no_del: bool,
+        _template: Option<String>,
+    ) -> Self {
         Self {
             dir: dir.to_string(),
             chunk_size,
-            mopac: mopac.to_string(),
+            mopac: "/opt/mopac/mopac".to_string(),
         }
     }
 }
