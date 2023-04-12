@@ -52,7 +52,7 @@ impl Queue<Molpro> for Slurm {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
         let mut body = self.template.clone().unwrap_or_else(|| {
             <Self as Queue<Molpro>>::default_submit_script(self)
-        });
+        }).replace("{{.filename}}", filename);
         for f in infiles {
             body.push_str(&format!("/home/qc/bin/molpro2020.sh 1 1 {f}.inp\n"));
         }
