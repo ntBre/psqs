@@ -85,7 +85,7 @@ impl Queue<Mopac> for Slurm {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
         let mut body = self.template.clone().unwrap_or_else(|| {
             <Self as Queue<Mopac>>::default_submit_script(self)
-        });
+        }).replace("{{.filename}}", filename);
         for f in infiles {
             body.push_str(&format!(
                 "/home/qc/mopac2016/MOPAC2016.exe {f}.mop\n"
