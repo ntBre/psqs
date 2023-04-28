@@ -63,11 +63,10 @@ where
         let mut body = String::from("export LD_LIBRARY_PATH=/opt/mopac/\n");
         for f in infiles {
             writeln!(body, "{} {f}.mop", self.mopac).unwrap();
-            writeln!(body, "cat {f}.mop {f}.out").unwrap();
-            writeln!(body, "echo \"================\"").unwrap();
+            writeln!(body, "cat {f}.mop {f}.out >> {filename}.out").unwrap();
+            writeln!(body, "echo \"================\" >> {filename}.out").unwrap();
         }
-        writeln!(body, "touch {filename}.out").unwrap();
-        body.push_str("date +%s\n");
+        body.push_str("date +%s >> {filename}.out\n");
         let mut file = File::create(filename).unwrap_or_else(|_| {
             panic!("failed to create submit script `{filename}`")
         });
