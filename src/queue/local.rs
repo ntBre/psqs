@@ -62,7 +62,7 @@ where
         use std::fmt::Write;
         let mut body = String::from("export LD_LIBRARY_PATH=/opt/mopac/\n");
         for f in infiles {
-            writeln!(body, "{} {f}.mop", self.mopac).unwrap();
+            writeln!(body, "{} {f}.mop &> {filename}.out", self.mopac).unwrap();
             writeln!(body, "cat {f}.mop {f}.out >> {filename}.out").unwrap();
             writeln!(body, "echo \"================\" >> {filename}.out").unwrap();
         }
