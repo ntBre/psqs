@@ -109,14 +109,16 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
     }
 
     fn status(&self) -> HashSet<String> {
-        let d = std::fs::read_dir("pts").unwrap();
-        for f in d {
-            eprintln!("contents of {:?}", f.as_ref().unwrap());
-            eprintln!(
-                "{}",
-                std::fs::read_to_string(f.unwrap().path()).unwrap()
-            );
-            eprintln!("================");
+        for dir in ["opt", "pts", "freqs"] {
+            let d = std::fs::read_dir(dir).unwrap();
+            for f in d {
+                eprintln!("contents of {:?}", f.as_ref().unwrap());
+                eprintln!(
+                    "{}",
+                    std::fs::read_to_string(f.unwrap().path()).unwrap()
+                );
+                eprintln!("================");
+            }
         }
         panic!("no status available for Local queue");
     }
