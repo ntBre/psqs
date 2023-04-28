@@ -63,6 +63,8 @@ where
         let mut body = String::from("export LD_LIBRARY_PATH=/opt/mopac/\n");
         for f in infiles {
             writeln!(body, "{} {f}.mop", self.mopac).unwrap();
+            writeln!(body, "cat {f}.mop {f}.out").unwrap();
+            writeln!(body, "echo \"================\"").unwrap();
         }
         writeln!(body, "touch {filename}.out").unwrap();
         body.push_str("date +%s\n");
@@ -107,7 +109,16 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
     }
 
     fn status(&self) -> HashSet<String> {
-        todo!();
+        let d = std::fs::read_dir("pts").unwrap();
+        for f in d {
+            eprintln!("contents of {:?}", f.as_ref().unwrap());
+            eprintln!(
+                "{}",
+                std::fs::read_to_string(f.unwrap().path()).unwrap()
+            );
+            eprintln!("================");
+        }
+        panic!("no status available for Local queue");
     }
 
     fn no_del(&self) -> bool {
