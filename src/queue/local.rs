@@ -64,9 +64,10 @@ where
         for f in infiles {
             writeln!(body, "{} {f}.mop &> {filename}.out", self.mopac).unwrap();
             writeln!(body, "cat {f}.mop {f}.out >> {filename}.out").unwrap();
-            writeln!(body, "echo \"================\" >> {filename}.out").unwrap();
+            writeln!(body, "echo \"================\" >> {filename}.out")
+                .unwrap();
         }
-        body.push_str("date +%s >> {filename}.out\n");
+        writeln!(body, "date +%s >> {filename}.out").unwrap();
         let mut file = File::create(filename).unwrap_or_else(|_| {
             panic!("failed to create submit script `{filename}`")
         });
