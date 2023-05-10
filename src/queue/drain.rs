@@ -322,7 +322,7 @@ pub(crate) trait Drain {
         use rayon::prelude::*;
         let works: Vec<_> = chunks
             .borrow_mut()
-            .take(job_limit - cur_jobs.len() / queue.chunk_size())
+            .take((job_limit - cur_jobs.len()) / queue.chunk_size())
             // NOTE par_bridge does NOT preserve order
             .par_bridge()
             .map(|(chunk_num, jobs)| {
