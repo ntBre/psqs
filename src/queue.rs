@@ -186,7 +186,7 @@ where
             job_id = self.submit(&queue_file);
         });
         submit += e;
-        for mut job in jobs {
+        for job in jobs {
             job.job_id = job_id.clone();
         }
         (slurm_jobs, input, script, submit)
