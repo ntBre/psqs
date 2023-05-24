@@ -25,6 +25,6 @@ jobs:
         run: cargo generate-lockfile
       # https://twitter.com/jonhoo/status/1571290371124260865
       - name: cargo test --locked
-        run: cargo test --locked --all-features --all-targets
+        run: cargo test --locked --all-features --lib --bins --tests --examples -- --test-threads=1
       - name: cargo bench
         run: cargo bench
