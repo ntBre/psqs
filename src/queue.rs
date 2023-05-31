@@ -1,4 +1,5 @@
 use std::{
+    cell::LazyCell,
     collections::{HashMap, HashSet},
     path::Path,
     process::Command,
@@ -19,7 +20,6 @@ pub mod local;
 pub mod pbs;
 pub mod slurm;
 use drain::*;
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 mod drain;
 
@@ -199,9 +199,7 @@ where
         slurm_jobs: &mut HashMap<String, usize>,
         job: &mut Job<P>,
     ) {
-        lazy_static! {
-            static ref NO_RESUB: bool = std::env::var("SEMP_RESUB").is_ok();
-        }
+        let no_resub = LazyCell::new(|| std::env::var("SEMP_RESUB").is_ok());
         // just overwrite the existing job with the resubmitted
         // version
         if !qstat.contains(&job.job_id) {
@@ -218,7 +216,7 @@ where
                 job.job_id,
                 e
             );
-            if *NO_RESUB {
+            if *no_resub {
                 eprintln!("resubmission disabled by SEMP_RESUB environment variable, exiting");
                 std::process::exit(1);
             }

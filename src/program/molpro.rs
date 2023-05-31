@@ -1,6 +1,8 @@
-use std::fs::{read_to_string, File};
+use std::{
+    cell::LazyCell,
+    fs::{read_to_string, File},
+};
 
-use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -89,15 +91,13 @@ impl Program for Molpro {
         use std::io::Write;
         let mut body = self.template().clone().header;
         // skip optgrad but accept optg at the end of a line
-        lazy_static! {
-            static ref OPTG: Regex = Regex::new(r"(?i)optg(,|\s*$)").unwrap();
-            static ref OPTG_LINE: Regex =
-                Regex::new(r"(?i)^.*optg(,|\s*$)").unwrap();
-            static ref CHARGE: Regex = Regex::new(r"\{\{.charge\}\}").unwrap();
-            static ref GEOM: Regex = Regex::new(r"\{\{.geom\}\}").unwrap();
-        }
+        let opt = LazyCell::new(|| Regex::new(r"(?i)optg(,|\s*$)").unwrap());
+        let optg_line =
+            LazyCell::new(|| Regex::new(r"(?i)^.*optg(,|\s*$)").unwrap());
+        let charge = LazyCell::new(|| Regex::new(r"\{\{.charge\}\}").unwrap());
+        let geom_re = LazyCell::new(|| Regex::new(r"\{\{.geom\}\}").unwrap());
         let mut found_opt = false;
-        if OPTG.is_match(&body) {
+        if opt.is_match(&body) {
             found_opt = true;
         }
         {
@@ -114,7 +114,7 @@ impl Program for Molpro {
                     if found_opt {
                         let mut new = String::new();
                         for line in body.lines() {
-                            if !OPTG_LINE.is_match(line) {
+                            if !optg_line.is_match(line) {
                                 writeln!(new, "{line}").unwrap();
                             }
                         }
@@ -139,8 +139,8 @@ impl Program for Molpro {
         } else {
             format!("{geom}\n}}\n")
         };
-        body = GEOM.replace(&body, geom).to_string();
-        body = CHARGE
+        body = geom_re.replace(&body, geom).to_string();
+        body = charge
             .replace(&body, &format!("{}", self.charge))
             .to_string();
 
@@ -160,17 +160,17 @@ impl Program for Molpro {
                 return Err(ProgramError::FileNotFound(outfile));
             }
         };
-        lazy_static! {
-            static ref PANIC: Regex = Regex::new("(?i)panic").unwrap();
-            static ref ERROR: Regex = Regex::new(r#"(?i)\berror\b"#).unwrap();
-            static ref GEOM: Regex = Regex::new("Current geometry").unwrap();
-            static ref BLANK: Regex = Regex::new(r"^\s*$").unwrap();
-            static ref TIME: Regex = Regex::new(r"^ REAL TIME").unwrap();
-            static ref ENERGY: Regex = Regex::new(r"^ PBQFF\s+=").unwrap();
-        }
-        if PANIC.is_match(&contents) {
+        let panic_re = LazyCell::new(|| Regex::new("(?i)panic").unwrap());
+        let error_re =
+            LazyCell::new(|| Regex::new(r#"(?i)\berror\b"#).unwrap());
+        let geom_re = LazyCell::new(|| Regex::new("Current geometry").unwrap());
+        let blank_re = LazyCell::new(|| Regex::new(r"^\s*$").unwrap());
+        let time_re = LazyCell::new(|| Regex::new(r"^ REAL TIME").unwrap());
+        let energy_re = LazyCell::new(|| Regex::new(r"^ PBQFF\s+=").unwrap());
+
+        if panic_re.is_match(&contents) {
             panic!("panic requested in read_output");
-        } else if ERROR.is_match(&contents) {
+        } else if error_re.is_match(&contents) {
             return Err(ProgramError::ErrorInOutput(outfile));
         }
 
@@ -182,14 +182,14 @@ impl Program for Molpro {
         for line in contents.lines() {
             if skip > 0 {
                 skip -= 1;
-            } else if TIME.is_match(line) {
+            } else if time_re.is_match(line) {
                 time = line
                     .split_ascii_whitespace()
                     .nth(3)
                     .unwrap()
                     .parse()
                     .unwrap_or_else(|e| panic!("{e:#?}"));
-            } else if ENERGY.is_match(line) {
+            } else if energy_re.is_match(line) {
                 let energy_str = line.split_whitespace().nth(2);
                 if let Some(e) = energy_str {
                     energy = if let Ok(v) = e.parse::<f64>() {
@@ -200,10 +200,10 @@ impl Program for Molpro {
                 } else {
                     return Err(ProgramError::EnergyParseError(outfile));
                 }
-            } else if GEOM.is_match(line) {
+            } else if geom_re.is_match(line) {
                 skip = 3;
                 geom = true;
-            } else if geom && BLANK.is_match(line) {
+            } else if geom && blank_re.is_match(line) {
                 geom = false;
             } else if geom {
                 let sp: Vec<_> = line.split_whitespace().collect();

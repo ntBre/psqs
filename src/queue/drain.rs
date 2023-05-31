@@ -5,6 +5,7 @@ use std::{
     iter::{Enumerate, Fuse, Peekable},
     marker::{Send, Sync},
     slice::ChunksMut,
+    sync::LazyLock,
     thread,
 };
 
@@ -30,14 +31,12 @@ mod dump;
 mod resub;
 mod timer;
 
-use lazy_static::lazy_static;
 use libc::{timeval, RUSAGE_SELF};
 use resub::Resub;
 use serde::{Deserialize, Serialize};
 
-lazy_static! {
-    static ref NO_RESUB: bool = std::env::var("NO_RESUB").is_ok();
-}
+static NO_RESUB: LazyLock<bool> =
+    LazyLock::new(|| std::env::var("NO_RESUB").is_ok());
 
 pub(crate) trait Drain {
     type Item;

@@ -1,11 +1,11 @@
 use crate::geom::{geom_string, Geom};
 use crate::program::{Program, ProgramError};
-use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use symm::Atom;
 
 use super::{Job, Procedure, ProgramResult, Template};
+use std::cell::LazyCell;
 use std::collections::hash_map::DefaultHasher;
 use std::fs::{read_to_string, File};
 use std::hash::{Hash, Hasher};
@@ -151,13 +151,13 @@ Comment line 2
                 return Err(ProgramError::FileNotFound(outfile));
             }
         };
-        lazy_static! {
-            static ref PANIC: Regex = Regex::new("(?i)panic").unwrap();
-            static ref ERROR: Regex = Regex::new("(?i)error").unwrap();
-        }
-        if ERROR.is_match(&contents) {
+
+        let panic = LazyCell::new(|| Regex::new("(?i)panic").unwrap());
+        let error = LazyCell::new(|| Regex::new("(?i)error").unwrap());
+
+        if error.is_match(&contents) {
             return Err(ProgramError::ErrorInOutput(filename.to_owned()));
-        } else if PANIC.is_match(&contents) {
+        } else if panic.is_match(&contents) {
             panic!("panic requested in read_output");
         }
         res
@@ -265,13 +265,12 @@ impl Mopac {
         };
         let lines = BufReader::new(f).lines().flatten();
         let mut energy = None;
-        lazy_static! {
-            static ref HEAT: Regex = Regex::new("^ HEAT_OF_FORMATION").unwrap();
-            static ref ATOM: Regex = Regex::new("^ ATOM_X_OPT").unwrap();
-            static ref ELEMENT: Regex = Regex::new("^ ATOM_EL").unwrap();
-            static ref CHARGE: Regex = Regex::new("^ ATOM_CHARGES").unwrap();
-            static ref TIME: Regex = Regex::new("^ CPU_TIME:SEC=").unwrap();
-        }
+        let heat_re =
+            LazyCell::new(|| Regex::new("^ HEAT_OF_FORMATION").unwrap());
+        let atom_re = LazyCell::new(|| Regex::new("^ ATOM_X_OPT").unwrap());
+        let elt_re = LazyCell::new(|| Regex::new("^ ATOM_EL").unwrap());
+        let charge_re = LazyCell::new(|| Regex::new("^ ATOM_CHARGES").unwrap());
+        let time_re = LazyCell::new(|| Regex::new("^ CPU_TIME:SEC=").unwrap());
         #[derive(PartialEq)]
         enum State {
             Geom,
@@ -299,7 +298,7 @@ impl Mopac {
         let mut coords = Vec::new();
         let mut time = 0.0;
         for line in lines {
-            if !guard.element && ELEMENT.is_match(&line) {
+            if !guard.element && elt_re.is_match(&line) {
                 state = State::Labels;
                 guard.element = true;
             } else if state == State::Labels {
@@ -308,7 +307,7 @@ impl Mopac {
                     .collect_into(&mut labels);
                 state = State::None;
             // line like HEAT_OF_FORMATION:KCAL/MOL=+0.97127947459164715838D+02
-            } else if !guard.heat && HEAT.is_match(&line) {
+            } else if !guard.heat && heat_re.is_match(&line) {
                 let fields: Vec<&str> = line.trim().split('=').collect();
                 match fields[1].replace('D', "E").parse::<f64>() {
                     Ok(f) => {
@@ -319,7 +318,7 @@ impl Mopac {
                     }
                 }
                 guard.heat = true;
-            } else if !guard.time && TIME.is_match(&line) {
+            } else if !guard.time && time_re.is_match(&line) {
                 time = line
                     .split('=')
                     .nth(1)
@@ -328,10 +327,10 @@ impl Mopac {
                     .parse()
                     .unwrap();
                 guard.time = true;
-            } else if !guard.atom && ATOM.is_match(&line) {
+            } else if !guard.atom && atom_re.is_match(&line) {
                 state = State::Geom;
                 guard.atom = true;
-            } else if state == State::Geom && CHARGE.is_match(&line) {
+            } else if state == State::Geom && charge_re.is_match(&line) {
                 state = State::Done;
                 break;
             } else if state == State::Geom {

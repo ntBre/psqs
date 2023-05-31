@@ -1,11 +1,13 @@
 use std::{
-    sync::mpsc::{self, Sender, SyncSender},
+    sync::{
+        mpsc::{self, Sender, SyncSender},
+        LazyLock,
+    },
     thread::{self, JoinHandle},
 };
 
-lazy_static::lazy_static! {
-    static ref DUMP_DEBUG: bool = std::env::var("DUMP_DEBUG").is_ok();
-}
+static DUMP_DEBUG: LazyLock<bool> =
+    LazyLock::new(|| std::env::var("DUMP_DEBUG").is_ok());
 
 /// a garbage heap that spawns another thread and sends filenames to be deleted.
 /// the `None` variant is used when no_del is enabled to turn every method into
