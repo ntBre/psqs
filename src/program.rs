@@ -1,4 +1,4 @@
-use std::{str::FromStr, time::SystemTime};
+use std::{error::Error, fmt::Display, str::FromStr, time::SystemTime};
 
 use serde::{Deserialize, Serialize};
 use symm::Atom;
@@ -33,6 +33,14 @@ impl ProgramError {
         matches!(self, Self::ErrorInOutput(..))
     }
 }
+
+impl Display for ProgramError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+impl Error for ProgramError {}
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Procedure {
