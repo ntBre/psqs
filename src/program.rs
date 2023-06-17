@@ -1,4 +1,6 @@
-use std::{error::Error, fmt::Display, str::FromStr, time::SystemTime};
+use std::{
+    error::Error, fmt::Display, path::Path, str::FromStr, time::SystemTime,
+};
 
 use serde::{Deserialize, Serialize};
 use symm::Atom;
@@ -125,7 +127,7 @@ pub trait Program {
     /// their files yet
     fn build_jobs(
         moles: Vec<Geom>,
-        dir: &'static str,
+        dir: impl AsRef<Path>,
         start_index: usize,
         coeff: f64,
         job_num: usize,
@@ -139,7 +141,9 @@ pub trait Program {
         let mut job_num = job_num;
         let mut jobs = Vec::new();
         for mol in moles {
-            let filename = format!("{dir}/job.{job_num:08}");
+            let filename = format!("job.{job_num:08}");
+            let filename =
+                dir.as_ref().join(filename).to_str().unwrap().to_string();
             job_num += 1;
             let mut job = Job::new(
                 Self::new(filename, tmpl.clone(), charge, mol.clone()),
