@@ -248,7 +248,7 @@ where
     where
         Self: std::marker::Sync,
     {
-        Opt.drain(dir, self, jobs, dst, 0)
+        Opt.drain(dir, self, jobs, dst, Check::None)
     }
 
     /// resume draining from the checkpoint file in `checkpoint`
@@ -257,7 +257,7 @@ where
         dir: &str,
         checkpoint: &str,
         dst: &mut [f64],
-        check_int: usize,
+        check: Check,
     ) -> Result<f64, ProgramError>
     where
         Self: Sync,
@@ -267,7 +267,7 @@ where
             "resuming from checkpoint in '{checkpoint}' with {} jobs remaining",
             jobs.len()
         );
-        self.drain(dir, jobs, dst, check_int)
+        self.drain(dir, jobs, dst, check)
     }
 
     /// run the single-point energy calculations in `jobs`, storing the results
@@ -277,12 +277,12 @@ where
         dir: &str,
         jobs: Vec<Job<P>>,
         dst: &mut [f64],
-        check_int: usize,
+        check: Check,
     ) -> Result<f64, ProgramError>
     where
         Self: std::marker::Sync,
     {
-        Single.drain(dir, self, jobs, dst, check_int)
+        Single.drain(dir, self, jobs, dst, check)
     }
 
     fn energize(
@@ -294,6 +294,6 @@ where
     where
         Self: std::marker::Sync,
     {
-        Both.drain(dir, self, jobs, dst, 0)
+        Both.drain(dir, self, jobs, dst, Check::None)
     }
 }

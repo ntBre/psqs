@@ -38,6 +38,11 @@ use serde::{Deserialize, Serialize};
 static NO_RESUB: LazyLock<bool> =
     LazyLock::new(|| std::env::var("NO_RESUB").is_ok());
 
+pub enum Check {
+    Some { check_int: usize, check_dir: String },
+    None,
+}
+
 pub(crate) trait Drain {
     type Item;
 
@@ -57,7 +62,7 @@ pub(crate) trait Drain {
         queue: &Q,
         mut jobs: Vec<Job<P>>,
         dst: &mut [Self::Item],
-        check_int: usize,
+        check: Check,
     ) -> Result<f64, ProgramError>
     where
         Self: Sync,
@@ -89,7 +94,7 @@ pub(crate) trait Drain {
         // really be the ideal solution, but it seems I can only consume the
         // iterator. another option would be to consume the iterator and rebuild
         // it when writing the checkpoints
-        let jobs_init = if check_int > 0 {
+        let jobs_init = if let Check::Some { .. } = check {
             jobs.clone()
         } else {
             Vec::new()
@@ -253,19 +258,26 @@ pub(crate) trait Drain {
                 wait(queue, &mut time, iter, remaining);
                 cleanup_intervals.next();
             }
-            if check_int > 0 && iter % check_int == 0 {
-                let mut cur_jobs = cur_jobs.clone();
-                // +1 because after the first chunk (chunk_num = 0) is written,
-                // we want to slice from the next chunk on
-                let cn = match last_chunk {
-                    Some(n) => n + 1,
-                    None => 0,
-                };
-                cur_jobs.extend(
-                    jobs_init[(cn * queue.chunk_size()).min(jobs_init.len())..]
-                        .to_vec(),
-                );
-                Self::write_checkpoint("chk.json", dst.to_vec(), cur_jobs);
+            if let Check::Some { check_int, .. } = &check {
+                if *check_int > 0 && iter % check_int == 0 {
+                    let mut cur_jobs = cur_jobs.clone();
+                    // +1 because after the first chunk (chunk_num = 0) is written,
+                    // we want to slice from the next chunk on
+                    let cn = match last_chunk {
+                        Some(n) => n + 1,
+                        None => 0,
+                    };
+                    cur_jobs.extend(
+                        jobs_init
+                            [(cn * queue.chunk_size()).min(jobs_init.len())..]
+                            .to_vec(),
+                    );
+                    Self::write_checkpoint(
+                        &format!("{dir}/chk.json"),
+                        dst.to_vec(),
+                        cur_jobs,
+                    );
+                }
             }
             iter += 1;
         }
