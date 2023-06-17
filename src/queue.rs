@@ -23,6 +23,8 @@ use drain::*;
 use serde::{Deserialize, Serialize};
 mod drain;
 
+pub use drain::Check;
+
 static DEBUG: bool = false;
 
 #[derive(PartialEq, Eq, Debug)]
