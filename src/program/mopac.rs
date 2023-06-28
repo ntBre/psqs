@@ -243,7 +243,6 @@ impl Mopac {
 
     /// write the `params` to `filename`
     pub fn write_params(params: &Params, filename: &str) {
-        let body = params.to_string();
         let mut file = match File::create(filename) {
             Ok(f) => f,
             Err(e) => {
@@ -251,7 +250,7 @@ impl Mopac {
                 std::process::exit(1);
             }
         };
-        write!(file, "{body}").expect("failed to write params file");
+        write!(file, "{params}").expect("failed to write params file");
     }
 
     /// return the heat of formation from a MOPAC aux file in Hartrees.
