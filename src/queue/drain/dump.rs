@@ -78,9 +78,14 @@ impl Dump {
     }
 
     pub(crate) fn shutdown(self) {
-        let Self::Real { handle, sender, signal } = self else {
-	    return
-	};
+        let Self::Real {
+            handle,
+            sender,
+            signal,
+        } = self
+        else {
+            return;
+        };
         time!(e, {
             drop(sender);
         });

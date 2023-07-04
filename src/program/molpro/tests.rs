@@ -185,8 +185,8 @@ mod read_output {
     fn error() {
         let got = Molpro::read_output("testfiles/molpro/error");
         let Err(e) = got else {
-	    panic!("expected error got {got:?}");
-	};
+            panic!("expected error got {got:?}");
+        };
         assert!(e.is_error_in_output());
     }
 
