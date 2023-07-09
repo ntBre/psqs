@@ -161,8 +161,7 @@ impl Program for Molpro {
             }
         };
         let panic_re = LazyCell::new(|| Regex::new("(?i)panic").unwrap());
-        let error_re =
-            LazyCell::new(|| Regex::new(r#"(?i)\berror\b"#).unwrap());
+        let error_re = LazyCell::new(|| Regex::new(r"(?i)\berror\b").unwrap());
         let geom_re = LazyCell::new(|| Regex::new("Current geometry").unwrap());
         let blank_re = LazyCell::new(|| Regex::new(r"^\s*$").unwrap());
         let time_re = LazyCell::new(|| Regex::new(r"^ REAL TIME").unwrap());
