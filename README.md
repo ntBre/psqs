@@ -9,8 +9,8 @@ quantum chemistry ProgramS and Queuing systemS
 
 This is a crate for Rust interfaces to quantum chemistry programs (like Molpro,
 Gaussian, and MOPAC) and queuing systems like Slurm and PBS. It contains traits
-defining the high-level behavior of these =Program=s and =Queue=s, as well as
-concrete implementations for the aforemention programs. The list of currently
+defining the high-level behavior of these `Program`s and `Queue`s, as well as
+concrete implementations for the aforementioned programs. The list of currently
 supported programs is as follows:
 
 ## Programs
