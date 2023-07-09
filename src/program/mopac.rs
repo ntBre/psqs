@@ -5,11 +5,11 @@ use serde::{Deserialize, Serialize};
 use symm::Atom;
 
 use super::{Job, Procedure, ProgramResult, Template};
-use std::cell::LazyCell;
 use std::collections::hash_map::DefaultHasher;
 use std::fs::{read_to_string, File};
 use std::hash::{Hash, Hasher};
 use std::io::{BufRead, BufReader, Write};
+use std::sync::OnceLock;
 
 /// kcal/mol per hartree
 pub const KCALHT: f64 = 627.5091809;
@@ -152,8 +152,12 @@ Comment line 2
             }
         };
 
-        let panic = LazyCell::new(|| Regex::new("(?i)panic").unwrap());
-        let error = LazyCell::new(|| Regex::new("(?i)error").unwrap());
+        let [panic, error] = READ_OUT_CELL.get_or_init(|| {
+            [
+                Regex::new("(?i)panic").unwrap(),
+                Regex::new("(?i)error").unwrap(),
+            ]
+        });
 
         if error.is_match(&contents) {
             return Err(ProgramError::ErrorInOutput(filename.to_owned()));
@@ -185,6 +189,9 @@ Comment line 2
         self.filename() + ".mop"
     }
 }
+
+static READ_OUT_CELL: OnceLock<[Regex; 2]> = OnceLock::new();
+static READ_AUX_CELL: OnceLock<[Regex; 5]> = OnceLock::new();
 
 impl Mopac {
     pub fn new_full(
@@ -264,12 +271,17 @@ impl Mopac {
         };
         let lines = BufReader::new(f).lines().flatten();
         let mut energy = None;
-        let heat_re =
-            LazyCell::new(|| Regex::new("^ HEAT_OF_FORMATION").unwrap());
-        let atom_re = LazyCell::new(|| Regex::new("^ ATOM_X_OPT").unwrap());
-        let elt_re = LazyCell::new(|| Regex::new("^ ATOM_EL").unwrap());
-        let charge_re = LazyCell::new(|| Regex::new("^ ATOM_CHARGES").unwrap());
-        let time_re = LazyCell::new(|| Regex::new("^ CPU_TIME:SEC=").unwrap());
+
+        let [heat_re, atom_re, elt_re, charge_re, time_re] = READ_AUX_CELL
+            .get_or_init(|| {
+                [
+                    Regex::new("^ HEAT_OF_FORMATION").unwrap(),
+                    Regex::new("^ ATOM_X_OPT").unwrap(),
+                    Regex::new("^ ATOM_EL").unwrap(),
+                    Regex::new("^ ATOM_CHARGES").unwrap(),
+                    Regex::new("^ CPU_TIME:SEC=").unwrap(),
+                ]
+            });
         #[derive(PartialEq)]
         enum State {
             Geom,
