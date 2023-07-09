@@ -1,6 +1,6 @@
 use std::{
-    cell::LazyCell,
     fs::{read_to_string, File},
+    sync::OnceLock,
 };
 
 use regex::Regex;
@@ -20,6 +20,9 @@ pub struct Molpro {
     charge: isize,
     geom: Geom,
 }
+
+static CELL: OnceLock<[Regex; 6]> = OnceLock::new();
+static INPUT_CELL: OnceLock<[Regex; 4]> = OnceLock::new();
 
 impl Program for Molpro {
     fn new(
@@ -91,11 +94,14 @@ impl Program for Molpro {
         use std::io::Write;
         let mut body = self.template().clone().header;
         // skip optgrad but accept optg at the end of a line
-        let opt = LazyCell::new(|| Regex::new(r"(?i)optg(,|\s*$)").unwrap());
-        let optg_line =
-            LazyCell::new(|| Regex::new(r"(?i)^.*optg(,|\s*$)").unwrap());
-        let charge = LazyCell::new(|| Regex::new(r"\{\{.charge\}\}").unwrap());
-        let geom_re = LazyCell::new(|| Regex::new(r"\{\{.geom\}\}").unwrap());
+        let [opt, optg_line, charge, geom_re] = INPUT_CELL.get_or_init(|| {
+            [
+                Regex::new(r"(?i)optg(,|\s*$)").unwrap(),
+                Regex::new(r"(?i)^.*optg(,|\s*$)").unwrap(),
+                Regex::new(r"\{\{.charge\}\}").unwrap(),
+                Regex::new(r"\{\{.geom\}\}").unwrap(),
+            ]
+        });
         let mut found_opt = false;
         if opt.is_match(&body) {
             found_opt = true;
@@ -160,12 +166,18 @@ impl Program for Molpro {
                 return Err(ProgramError::FileNotFound(outfile));
             }
         };
-        let panic_re = LazyCell::new(|| Regex::new("(?i)panic").unwrap());
-        let error_re = LazyCell::new(|| Regex::new(r"(?i)\berror\b").unwrap());
-        let geom_re = LazyCell::new(|| Regex::new("Current geometry").unwrap());
-        let blank_re = LazyCell::new(|| Regex::new(r"^\s*$").unwrap());
-        let time_re = LazyCell::new(|| Regex::new(r"^ REAL TIME").unwrap());
-        let energy_re = LazyCell::new(|| Regex::new(r"^ PBQFF\s+=").unwrap());
+
+        let [panic_re, error_re, geom_re, blank_re, time_re, energy_re] = CELL
+            .get_or_init(|| {
+                [
+                    Regex::new("(?i)panic").unwrap(),
+                    Regex::new(r"(?i)\berror\b").unwrap(),
+                    Regex::new("Current geometry").unwrap(),
+                    Regex::new(r"^\s*$").unwrap(),
+                    Regex::new(r"^ REAL TIME").unwrap(),
+                    Regex::new(r"^ PBQFF\s+=").unwrap(),
+                ]
+            });
 
         if panic_re.is_match(&contents) {
             panic!("panic requested in read_output");
