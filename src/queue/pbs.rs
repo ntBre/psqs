@@ -50,22 +50,10 @@ where
 {
     /// submit `filename` to the queue and return the jobid
     fn submit(&self, filename: &str) -> String {
-        match Command::new(<Self as SubQueue<Mopac>>::submit_command(self))
-            .arg("-f")
-            .arg(filename)
-            .output()
-        {
-            Ok(s) => {
-                let raw =
-                    std::str::from_utf8(&s.stdout).unwrap().trim().to_string();
-                return raw
-                    .split_whitespace()
-                    .last()
-                    .unwrap_or("no jobid")
-                    .to_string();
-            }
-            Err(e) => panic!("{e:?}"),
-        };
+        let mut cmd =
+            Command::new(<Self as SubQueue<Mopac>>::submit_command(self));
+        let cmd = cmd.arg("-f").arg(filename);
+        submit_inner(cmd).unwrap()
     }
 }
 
@@ -82,18 +70,27 @@ where
         let mut cmd =
             Command::new(<Self as SubQueue<Molpro>>::submit_command(self));
         let cmd = cmd.arg(base).current_dir(dir);
-        match cmd.output() {
-            Ok(s) => {
-                let raw =
-                    std::str::from_utf8(&s.stdout).unwrap().trim().to_string();
-                return raw
-                    .split_whitespace()
-                    .last()
-                    .unwrap_or_default()
-                    .to_string();
+        submit_inner(cmd).unwrap()
+    }
+}
+
+/// helper function to consolidate error handling between the two submit
+/// implementations
+fn submit_inner(cmd: &mut Command) -> std::io::Result<String> {
+    match cmd.output() {
+        Ok(s) => {
+            if !s.status.success() {
+                panic!("qsub failed with output: {s:#?}");
             }
-            Err(e) => panic!("{e:?}"),
-        };
+            let raw =
+                std::str::from_utf8(&s.stdout).unwrap().trim().to_string();
+            Ok(raw
+                .split_whitespace()
+                .last()
+                .unwrap_or("no jobid")
+                .to_string())
+        }
+        Err(e) => Err(e),
     }
 }
 
