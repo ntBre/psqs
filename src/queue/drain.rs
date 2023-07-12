@@ -114,7 +114,7 @@ pub(crate) trait Drain {
         let mut last_chunk = None;
         let mut to_remove = Vec::new();
         let mut resub = Resub::new(queue, dir, self.procedure());
-        let mut iter = 1;
+        let mut iter = 0;
         loop {
             let loop_time = std::time::Instant::now();
             if chunks.peek().is_none() {
