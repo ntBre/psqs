@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::time::Duration;
 use std::{collections::HashSet, process::Command};
 
 use serde::{Deserialize, Serialize};
@@ -53,7 +54,7 @@ where
         let mut cmd =
             Command::new(<Self as SubQueue<Mopac>>::submit_command(self));
         let cmd = cmd.arg("-f").arg(filename);
-        submit_inner(cmd).unwrap()
+        submit_inner(cmd, self.sleep_int).unwrap()
     }
 }
 
@@ -70,27 +71,44 @@ where
         let mut cmd =
             Command::new(<Self as SubQueue<Molpro>>::submit_command(self));
         let cmd = cmd.arg(base).current_dir(dir);
-        submit_inner(cmd).unwrap()
+        submit_inner(cmd, self.sleep_int).unwrap()
     }
 }
 
 /// helper function to consolidate error handling between the two submit
 /// implementations
-fn submit_inner(cmd: &mut Command) -> std::io::Result<String> {
-    match cmd.output() {
-        Ok(s) => {
-            if !s.status.success() {
-                panic!("qsub failed with output: {s:#?}");
+fn submit_inner(
+    cmd: &mut Command,
+    sleep_int: usize,
+) -> std::io::Result<String> {
+    let mut retries = 5;
+    loop {
+        match cmd.output() {
+            Ok(s) => {
+                if !s.status.success() {
+                    if retries > 0 {
+                        eprintln!(
+                            "qsub failed with output: {s:#?}, \
+				   retrying {retries} more times"
+                        );
+                        retries -= 1;
+                        std::thread::sleep(Duration::from_secs(
+                            sleep_int as u64,
+                        ));
+                        continue;
+                    }
+                    panic!("qsub failed with output: {s:#?}");
+                }
+                let raw =
+                    std::str::from_utf8(&s.stdout).unwrap().trim().to_string();
+                return Ok(raw
+                    .split_whitespace()
+                    .last()
+                    .unwrap_or("no jobid")
+                    .to_string());
             }
-            let raw =
-                std::str::from_utf8(&s.stdout).unwrap().trim().to_string();
-            Ok(raw
-                .split_whitespace()
-                .last()
-                .unwrap_or("no jobid")
-                .to_string())
+            Err(e) => return Err(e),
         }
-        Err(e) => Err(e),
     }
 }
 
