@@ -293,7 +293,9 @@ pub(crate) trait Drain {
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
         Self::Item: Clone + for<'a> Deserialize<'a>,
     {
-        let f = std::fs::File::open(checkpoint).unwrap();
+        let Ok(f) = std::fs::File::open(checkpoint) else {
+            panic!("failed to open {checkpoint}");
+        };
         let Checkpoint { dst: d, jobs } = serde_json::from_reader(f).unwrap();
         dst.clone_from_slice(&d);
         jobs
@@ -308,6 +310,7 @@ pub(crate) trait Drain {
         Self::Item: Serialize,
     {
         let c = Checkpoint { dst, jobs };
+        eprintln!("writing checkpoint to {checkpoint}");
         let f = std::fs::File::create(checkpoint).unwrap();
         serde_json::to_writer_pretty(f, &c).unwrap();
     }
