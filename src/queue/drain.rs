@@ -258,7 +258,7 @@ pub(crate) trait Drain {
                 wait(queue, &mut time, iter, remaining);
                 cleanup_intervals.next();
             }
-            if let Check::Some { check_int, .. } = &check {
+            if let Check::Some { check_int, check_dir } = &check {
                 if *check_int > 0 && iter % check_int == 0 {
                     let mut cur_jobs = cur_jobs.clone();
                     // +1 because after the first chunk (chunk_num = 0) is written,
@@ -273,7 +273,7 @@ pub(crate) trait Drain {
                             .to_vec(),
                     );
                     Self::write_checkpoint(
-                        &format!("{dir}/chk.json"),
+                        &format!("{check_dir}/chk.json"),
                         dst.to_vec(),
                         cur_jobs,
                     );
