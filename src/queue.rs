@@ -163,7 +163,7 @@ where
         let mut script = Duration::default();
         let mut submit = Duration::default();
         let queue_file =
-            format!("{}/{base}{}.{}", dir, chunk_num, Self::SCRIPT_EXT);
+            format!("{dir}/{base}{chunk_num}.{}", Self::SCRIPT_EXT);
         let jl = jobs.len();
         let mut filenames = Vec::with_capacity(jobs.len());
         let mut slurm_jobs = HashMap::new();
@@ -244,7 +244,7 @@ where
     fn optimize(
         &self,
         dir: &str,
-        jobs: Vec<Job<P>>,
+        jobs: impl Iterator<Item = Job<P>>,
         dst: &mut [Geom],
     ) -> Result<f64, ProgramError>
     where
@@ -269,7 +269,7 @@ where
             "resuming from checkpoint in '{checkpoint}' with {} jobs remaining",
             jobs.len()
         );
-        self.drain(dir, jobs, dst, check)
+        self.drain(dir, jobs.into_iter(), dst, check)
     }
 
     /// run the single-point energy calculations in `jobs`, storing the results
@@ -277,7 +277,7 @@ where
     fn drain(
         &self,
         dir: &str,
-        jobs: Vec<Job<P>>,
+        jobs: impl Iterator<Item = Job<P>>,
         dst: &mut [f64],
         check: Check,
     ) -> Result<f64, ProgramError>
@@ -290,7 +290,7 @@ where
     fn energize(
         &self,
         dir: &str,
-        jobs: Vec<Job<P>>,
+        jobs: impl Iterator<Item = Job<P>>,
         dst: &mut [ProgramResult],
     ) -> Result<f64, ProgramError>
     where

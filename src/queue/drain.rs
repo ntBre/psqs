@@ -2,9 +2,8 @@ use core::time;
 use std::{
     borrow::BorrowMut,
     collections::{HashMap, HashSet},
-    iter::{Enumerate, Fuse, Peekable},
+    iter::Peekable,
     marker::{Send, Sync},
-    slice::ChunksMut,
     sync::LazyLock,
     thread,
 };
@@ -60,7 +59,7 @@ pub(crate) trait Drain {
         &self,
         dir: &str,
         queue: &Q,
-        mut jobs: Vec<Job<P>>,
+        jobs: impl Iterator<Item = Job<P>>,
         dst: &mut [Self::Item],
         check: Check,
     ) -> Result<f64, ProgramError>
@@ -75,7 +74,6 @@ pub(crate) trait Drain {
 
         let mut cur_jobs = Vec::new();
         let mut slurm_jobs = HashMap::new();
-        let mut remaining = jobs.len();
 
         let job_limit = queue.job_limit();
 
@@ -85,44 +83,21 @@ pub(crate) trait Drain {
         let mut time = timer::Timer::default();
 
         let mut qstat = HashSet::<String>::new();
-        // this is a bit sad, but I need the original jobs for checkpoints and I
-        // can't get an immutable reference to them while chunks is holding a
-        // mutable reference. also can't use a Cow because the chunks_mut call
-        // would clone immediately anyway. I wanted something like Cow because I
-        // only need this clone if check_int is nonzero. I also can't figure out
-        // how to clone chunks itself when writing the checkpoint. that would
-        // really be the ideal solution, but it seems I can only consume the
-        // iterator. another option would be to consume the iterator and rebuild
-        // it when writing the checkpoints
-        let jobs_init = if let Check::Some { .. } = check {
-            jobs.clone()
-        } else {
-            Vec::new()
-        };
-        let total_jobs = jobs.len();
-        // for fast jobs, it may be necessary to stop and clean up even if
-        // finished != 0. this is used to signal that case
-        let mut cleanup_intervals =
-            (0..total_jobs).step_by(job_limit).peekable();
-        let mut chunks = jobs
-            .chunks_mut(queue.chunk_size())
-            .enumerate()
-            .fuse()
-            .peekable();
         // the index of the last chunk consumed. used for writing remaining jobs
         // to checkpoints. None initially and then Some(chunk_num)
-        let mut last_chunk = None;
         let mut to_remove = Vec::new();
         let mut resub = Resub::new(queue, dir, self.procedure());
         let mut iter = 0;
+
+        let mut jobs = jobs.fuse().enumerate().peekable();
         loop {
             let loop_time = std::time::Instant::now();
-            if chunks.peek().is_none() {
+            if jobs.peek().is_none() {
                 out_of_jobs = true;
             }
             if !out_of_jobs {
                 self.receive_jobs(
-                    &mut chunks,
+                    &mut jobs,
                     job_limit,
                     &mut cur_jobs,
                     queue,
@@ -130,7 +105,6 @@ pub(crate) trait Drain {
                     &mut slurm_jobs,
                     &mut time,
                     &mut qstat,
-                    &mut last_chunk,
                 );
             }
 
@@ -155,7 +129,6 @@ pub(crate) trait Drain {
                             dump.send(f);
                         }
                         finished += 1;
-                        remaining -= 1;
                         let job_name = job.pbs_file.as_str();
                         let mut count = match slurm_jobs.get_mut(job_name) {
                             Some(n) => *n,
@@ -250,32 +223,17 @@ pub(crate) trait Drain {
                 return Ok(job_time);
             }
             if finished == 0 {
-                wait(queue, &mut time, iter, remaining);
+                wait(queue, &mut time, iter);
                 qstat = queue.status();
-            } else if total_jobs - remaining
-                > *cleanup_intervals.peek().unwrap_or(&total_jobs)
-            {
-                wait(queue, &mut time, iter, remaining);
-                cleanup_intervals.next();
             }
+
             if let Check::Some {
                 check_int,
                 check_dir,
             } = &check
             {
                 if *check_int > 0 && iter % check_int == 0 {
-                    let mut cur_jobs = cur_jobs.clone();
-                    // +1 because after the first chunk (chunk_num = 0) is written,
-                    // we want to slice from the next chunk on
-                    let cn = match last_chunk {
-                        Some(n) => n + 1,
-                        None => 0,
-                    };
-                    cur_jobs.extend(
-                        jobs_init
-                            [(cn * queue.chunk_size()).min(jobs_init.len())..]
-                            .to_vec(),
-                    );
+                    let cur_jobs = cur_jobs.clone();
                     Self::write_checkpoint(
                         &format!("{check_dir}/chk.json"),
                         dst.to_vec(),
@@ -322,7 +280,7 @@ pub(crate) trait Drain {
     #[allow(clippy::too_many_arguments)]
     fn receive_jobs<P, Q>(
         &self,
-        chunks: &mut Peekable<Fuse<Enumerate<ChunksMut<Job<P>>>>>,
+        jobs: &mut Peekable<impl Iterator<Item = (usize, Job<P>)>>,
         job_limit: usize,
         cur_jobs: &mut Vec<Job<P>>,
         queue: &Q,
@@ -330,23 +288,34 @@ pub(crate) trait Drain {
         slurm_jobs: &mut HashMap<String, usize>,
         time: &mut timer::Timer,
         qstat: &mut HashSet<String>,
-        last_chunk: &mut Option<usize>,
     ) where
         Self: Sync,
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
         Q: Queue<P> + ?Sized + Sync,
         <Self as Drain>::Item: Clone + Serialize,
     {
+        let mut chunks = Vec::new();
+        let chunk_size = queue.chunk_size();
+        while jobs.peek().is_some() && cur_jobs.len() + chunk_size <= job_limit
+        {
+            let chunk: Vec<_> =
+                jobs.borrow_mut().take(chunk_size).map(|(_, j)| j).collect();
+            chunks.push(chunk);
+        }
+
         use rayon::prelude::*;
         let works: Vec<_> = chunks
-            .borrow_mut()
-            .take((job_limit - cur_jobs.len()) / queue.chunk_size())
-            // NOTE par_bridge does NOT preserve order
+            .into_iter()
+            .enumerate()
             .par_bridge()
-            .map(|(chunk_num, jobs)| {
+            .map(|(chunk_num, mut jobs)| {
                 let now = std::time::Instant::now();
-                let (slurm_jobs, wi, ws, ss) =
-                    queue.build_chunk(dir, jobs, chunk_num, self.procedure());
+                let (slurm_jobs, wi, ws, ss) = queue.build_chunk(
+                    dir,
+                    &mut jobs,
+                    chunk_num,
+                    self.procedure(),
+                );
                 let job_id = jobs[0].job_id.clone();
                 let elapsed = now.elapsed();
                 if DEBUG {
@@ -356,22 +325,17 @@ pub(crate) trait Drain {
                         elapsed.as_millis() as f64 / 1000.0
                     );
                 }
-                (jobs.to_vec(), slurm_jobs, job_id, wi, ws, ss, chunk_num)
+                (jobs.to_vec(), slurm_jobs, job_id, wi, ws, ss)
             })
             .collect();
-        for (jobs, sj, job_id, wi, ws, ss, cn) in works {
+
+        for (jobs, sj, job_id, wi, ws, ss) in works {
             slurm_jobs.extend(sj);
             time.writing_input += wi;
             time.writing_script += ws;
             time.submitting_script += ss;
             qstat.insert(job_id);
             cur_jobs.extend(jobs);
-            // necessary because par_bridge may swap order
-            if let Some(n) = *last_chunk {
-                *last_chunk = Some(usize::max(n, cn))
-            } else {
-                *last_chunk = Some(cn);
-            }
         }
     }
 }
@@ -393,16 +357,13 @@ fn get_cpu_time() -> f64 {
     }
 }
 
-fn wait<P, Q>(queue: &Q, time: &mut timer::Timer, iter: usize, remaining: usize)
+fn wait<P, Q>(queue: &Q, time: &mut timer::Timer, iter: usize)
 where
     P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
     Q: Queue<P> + ?Sized + Sync,
 {
     let date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
-    eprintln!(
-        "[iter {iter} {date} {:.1} CPU s] {remaining} jobs remaining",
-        get_cpu_time()
-    );
+    eprintln!("[iter {iter} {date} {:.1} CPU s]", get_cpu_time());
     let d = time::Duration::from_secs(queue.sleep_int() as u64);
     time.sleeping += d;
     thread::sleep(d);
