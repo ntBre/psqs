@@ -42,6 +42,16 @@ pub enum Check {
     None,
 }
 
+impl Check {
+    /// Returns `true` if the check is [`Some`].
+    ///
+    /// [`Some`]: Check::Some
+    #[must_use]
+    pub fn is_some(&self) -> bool {
+        matches!(self, Self::Some { .. })
+    }
+}
+
 pub(crate) trait Drain {
     type Item;
 
