@@ -83,6 +83,10 @@ pub(crate) trait Drain {
         let mut time = timer::Timer::default();
 
         let mut qstat = HashSet::<String>::new();
+        // for fast jobs, it may be necessary to stop and clean up even if
+        // finished != 0. this is used to signal that case
+        let mut cleanup_intervals = (0..).step_by(job_limit).peekable();
+        let mut total_finished = 0;
         // the index of the last chunk consumed. used for writing remaining jobs
         // to checkpoints. None initially and then Some(chunk_num)
         let mut to_remove = Vec::new();
@@ -222,9 +226,14 @@ pub(crate) trait Drain {
                 eprintln!("{time}");
                 return Ok(job_time);
             }
+            total_finished += finished;
             if finished == 0 {
                 wait(queue, &mut time, iter);
                 qstat = queue.status();
+            } else if total_finished > *cleanup_intervals.peek().unwrap() {
+                // safe unwrap because cleanup_intervals is infinite
+                wait(queue, &mut time, iter);
+                cleanup_intervals.next();
             }
 
             if let Check::Some {
