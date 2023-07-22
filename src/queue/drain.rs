@@ -59,7 +59,7 @@ pub(crate) trait Drain {
         &self,
         dir: &str,
         queue: &Q,
-        jobs: impl IntoIterator<Item = Job<P>>,
+        jobs: impl IntoIterator<Item = Job<P>> + Clone,
         dst: &mut [Self::Item],
         check: Check,
     ) -> Result<f64, ProgramError>

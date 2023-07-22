@@ -244,7 +244,7 @@ where
     fn optimize(
         &self,
         dir: &str,
-        jobs: impl IntoIterator<Item = Job<P>>,
+        jobs: impl IntoIterator<Item = Job<P>> + Clone,
         dst: &mut [Geom],
     ) -> Result<f64, ProgramError>
     where
@@ -269,7 +269,7 @@ where
             "resuming from checkpoint in '{checkpoint}' with {} jobs remaining",
             jobs.len()
         );
-        self.drain(dir, jobs.into_iter(), dst, check)
+        self.drain(dir, jobs, dst, check)
     }
 
     /// run the single-point energy calculations in `jobs`, storing the results
@@ -277,7 +277,7 @@ where
     fn drain(
         &self,
         dir: &str,
-        jobs: impl IntoIterator<Item = Job<P>>,
+        jobs: impl IntoIterator<Item = Job<P>> + Clone,
         dst: &mut [f64],
         check: Check,
     ) -> Result<f64, ProgramError>
@@ -290,7 +290,7 @@ where
     fn energize(
         &self,
         dir: &str,
-        jobs: impl IntoIterator<Item = Job<P>>,
+        jobs: impl IntoIterator<Item = Job<P>> + Clone,
         dst: &mut [ProgramResult],
     ) -> Result<f64, ProgramError>
     where
