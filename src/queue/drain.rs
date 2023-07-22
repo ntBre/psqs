@@ -59,7 +59,7 @@ pub(crate) trait Drain {
 
     fn set_result<P: Program>(
         &self,
-        dst: &mut [Self::Item],
+        dst: &mut Vec<Self::Item>,
         job: &mut Job<P>,
         res: ProgramResult,
     );
@@ -70,9 +70,9 @@ pub(crate) trait Drain {
         dir: &str,
         queue: &Q,
         jobs: impl IntoIterator<Item = Job<P>> + Clone,
-        dst: &mut [Self::Item],
+        mut dst: Vec<Self::Item>,
         check: Check,
-    ) -> Result<f64, ProgramError>
+    ) -> Result<(Vec<Self::Item>, f64), ProgramError>
     where
         Self: Sync,
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
@@ -145,7 +145,7 @@ pub(crate) trait Drain {
                     Ok(res) => {
                         to_remove.push(i);
                         job_time += res.time;
-                        self.set_result(dst, job, res);
+                        self.set_result(&mut dst, job, res);
                         for f in job.program.associated_files() {
                             dump.send(f);
                         }
@@ -241,7 +241,7 @@ pub(crate) trait Drain {
             if cur_jobs.is_empty() && out_of_jobs {
                 dump.shutdown();
                 eprintln!("{time}");
-                return Ok(job_time);
+                return Ok((dst, job_time));
             }
             total_finished += finished;
             if finished == 0 {
@@ -284,10 +284,7 @@ pub(crate) trait Drain {
 
     /// load a checkpoint from the `checkpoint` file, storing the energies in
     /// `dst` and returning the list of remaining jobs
-    fn load_checkpoint<P>(
-        checkpoint: &str,
-        dst: &mut [Self::Item],
-    ) -> Vec<Job<P>>
+    fn load_checkpoint<P>(checkpoint: &str) -> (Vec<Self::Item>, Vec<Job<P>>)
     where
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
         Self::Item: Clone + for<'a> Deserialize<'a>,
@@ -295,9 +292,8 @@ pub(crate) trait Drain {
         let Ok(f) = std::fs::File::open(checkpoint) else {
             panic!("failed to open {checkpoint}");
         };
-        let Checkpoint { dst: d, jobs } = serde_json::from_reader(f).unwrap();
-        dst.clone_from_slice(&d);
-        jobs
+        let Checkpoint { dst, jobs } = serde_json::from_reader(f).unwrap();
+        (dst, jobs)
     }
 
     fn write_checkpoint<P>(
@@ -413,6 +409,13 @@ where
     thread::sleep(d);
 }
 
+#[inline]
+fn check_size<T: Default>(dst: &mut Vec<T>, idx: usize) {
+    if dst.len() <= idx {
+        dst.resize_with(idx + 1, T::default);
+    }
+}
+
 pub(crate) struct Opt;
 
 impl Drain for Opt {
@@ -424,10 +427,11 @@ impl Drain for Opt {
 
     fn set_result<P: Program>(
         &self,
-        dst: &mut [Self::Item],
+        dst: &mut Vec<Self::Item>,
         job: &mut Job<P>,
         res: ProgramResult,
     ) {
+        check_size(dst, job.index);
         dst[job.index] = Geom::Xyz(res.cart_geom.unwrap());
     }
 }
@@ -452,10 +456,11 @@ impl Drain for Single {
 
     fn set_result<P: Program>(
         &self,
-        dst: &mut [Self::Item],
+        dst: &mut Vec<Self::Item>,
         job: &mut Job<P>,
         res: ProgramResult,
     ) {
+        check_size(dst, job.index);
         dst[job.index] += job.coeff * res.energy;
     }
 }
@@ -471,10 +476,11 @@ impl Drain for Both {
 
     fn set_result<P: Program>(
         &self,
-        dst: &mut [Self::Item],
+        dst: &mut Vec<Self::Item>,
         job: &mut Job<P>,
         res: ProgramResult,
     ) {
+        check_size(dst, job.index);
         dst[job.index] = res;
     }
 }

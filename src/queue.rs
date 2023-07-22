@@ -245,12 +245,11 @@ where
         &self,
         dir: &str,
         jobs: impl IntoIterator<Item = Job<P>> + Clone,
-        dst: &mut [Geom],
-    ) -> Result<f64, ProgramError>
+    ) -> Result<(Vec<Geom>, f64), ProgramError>
     where
         Self: std::marker::Sync,
     {
-        Opt.drain(dir, self, jobs, dst, Check::None)
+        Opt.drain(dir, self, jobs, Vec::new(), Check::None)
     }
 
     /// resume draining from the checkpoint file in `checkpoint`
@@ -258,18 +257,13 @@ where
         &self,
         dir: &str,
         checkpoint: &str,
-        dst: &mut [f64],
         check: Check,
-    ) -> Result<f64, ProgramError>
+    ) -> Result<(Vec<f64>, f64), ProgramError>
     where
         Self: Sync,
     {
-        let jobs = Single::load_checkpoint(checkpoint, dst);
-        eprintln!(
-            "resuming from checkpoint in '{checkpoint}' with {} jobs remaining",
-            jobs.len()
-        );
-        self.drain(dir, jobs, dst, check)
+        let (dst, jobs) = Single::load_checkpoint(checkpoint);
+        Single.drain(dir, self, jobs, dst, check)
     }
 
     /// run the single-point energy calculations in `jobs`, storing the results
@@ -278,24 +272,22 @@ where
         &self,
         dir: &str,
         jobs: impl IntoIterator<Item = Job<P>> + Clone,
-        dst: &mut [f64],
         check: Check,
-    ) -> Result<f64, ProgramError>
+    ) -> Result<(Vec<f64>, f64), ProgramError>
     where
         Self: std::marker::Sync,
     {
-        Single.drain(dir, self, jobs, dst, check)
+        Single.drain(dir, self, jobs, Vec::new(), check)
     }
 
     fn energize(
         &self,
         dir: &str,
         jobs: impl IntoIterator<Item = Job<P>> + Clone,
-        dst: &mut [ProgramResult],
-    ) -> Result<f64, ProgramError>
+    ) -> Result<(Vec<ProgramResult>, f64), ProgramError>
     where
         Self: std::marker::Sync,
     {
-        Both.drain(dir, self, jobs, dst, Check::None)
+        Both.drain(dir, self, jobs, Vec::new(), Check::None)
     }
 }

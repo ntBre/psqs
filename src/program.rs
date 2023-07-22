@@ -80,6 +80,26 @@ impl FromStr for Template {
     }
 }
 
+#[derive(Clone)]
+pub struct JobIter<P: Program> {
+    jobs: Vec<Job<P>>,
+}
+
+impl<P: Program> JobIter<P> {
+    fn new(mut jobs: Vec<Job<P>>) -> Self {
+        jobs.reverse();
+        Self { jobs }
+    }
+}
+
+impl<P: Program> Iterator for JobIter<P> {
+    type Item = Job<P>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.jobs.pop()
+    }
+}
+
 /// A trait for describing programs runnable on a [crate::queue::Queue]
 pub trait Program {
     /// returns the file associated with the program's input. it should not
@@ -133,7 +153,7 @@ pub trait Program {
         job_num: usize,
         charge: isize,
         tmpl: Template,
-    ) -> Vec<Job<Self>>
+    ) -> JobIter<Self>
     where
         Self: std::marker::Sized,
     {
@@ -153,7 +173,7 @@ pub trait Program {
             jobs.push(job);
             count += 1;
         }
-        jobs
+        JobIter::new(jobs)
     }
 }
 
