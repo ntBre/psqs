@@ -244,7 +244,7 @@ where
     fn optimize(
         &self,
         dir: &str,
-        jobs: impl Iterator<Item = Job<P>>,
+        jobs: impl IntoIterator<Item = Job<P>>,
         dst: &mut [Geom],
     ) -> Result<f64, ProgramError>
     where
@@ -277,7 +277,7 @@ where
     fn drain(
         &self,
         dir: &str,
-        jobs: impl Iterator<Item = Job<P>>,
+        jobs: impl IntoIterator<Item = Job<P>>,
         dst: &mut [f64],
         check: Check,
     ) -> Result<f64, ProgramError>
@@ -290,7 +290,7 @@ where
     fn energize(
         &self,
         dir: &str,
-        jobs: impl Iterator<Item = Job<P>>,
+        jobs: impl IntoIterator<Item = Job<P>>,
         dst: &mut [ProgramResult],
     ) -> Result<f64, ProgramError>
     where

@@ -59,7 +59,7 @@ pub(crate) trait Drain {
         &self,
         dir: &str,
         queue: &Q,
-        jobs: impl Iterator<Item = Job<P>>,
+        jobs: impl IntoIterator<Item = Job<P>>,
         dst: &mut [Self::Item],
         check: Check,
     ) -> Result<f64, ProgramError>
@@ -93,7 +93,7 @@ pub(crate) trait Drain {
         let mut resub = Resub::new(queue, dir, self.procedure());
         let mut iter = 0;
 
-        let mut jobs = jobs.fuse().enumerate().peekable();
+        let mut jobs = jobs.into_iter().fuse().enumerate().peekable();
         loop {
             let loop_time = std::time::Instant::now();
             if jobs.peek().is_none() {
