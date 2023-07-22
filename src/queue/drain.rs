@@ -93,12 +93,18 @@ pub(crate) trait Drain {
         let mut time = timer::Timer::default();
 
         let mut qstat = HashSet::<String>::new();
+        let jobs_init = if check.is_some() {
+            jobs.clone().into_iter().collect()
+        } else {
+            Vec::new()
+        };
         // for fast jobs, it may be necessary to stop and clean up even if
         // finished != 0. this is used to signal that case
         let mut cleanup_intervals = (0..).step_by(job_limit).peekable();
         let mut total_finished = 0;
         // the index of the last chunk consumed. used for writing remaining jobs
         // to checkpoints. None initially and then Some(chunk_num)
+        let mut last_chunk = None;
         let mut to_remove = Vec::new();
         let mut resub = Resub::new(queue, dir, self.procedure());
         let mut iter = 0;
@@ -119,6 +125,7 @@ pub(crate) trait Drain {
                     &mut slurm_jobs,
                     &mut time,
                     &mut qstat,
+                    &mut last_chunk,
                 );
             }
 
@@ -252,7 +259,18 @@ pub(crate) trait Drain {
             } = &check
             {
                 if *check_int > 0 && iter % check_int == 0 {
-                    let cur_jobs = cur_jobs.clone();
+                    let mut cur_jobs = cur_jobs.clone();
+                    // +1 because after the first chunk (chunk_num = 0) is
+                    // written, we want to slice from the next chunk on
+                    let cn = match last_chunk {
+                        Some(n) => n + 1,
+                        None => 0,
+                    };
+                    cur_jobs.extend(
+                        jobs_init
+                            [(cn * queue.chunk_size()).min(jobs_init.len())..]
+                            .to_vec(),
+                    );
                     Self::write_checkpoint(
                         &format!("{check_dir}/chk.json"),
                         dst.to_vec(),
@@ -307,6 +325,7 @@ pub(crate) trait Drain {
         slurm_jobs: &mut HashMap<String, usize>,
         time: &mut timer::Timer,
         qstat: &mut HashSet<String>,
+        last_chunk: &mut Option<usize>,
     ) where
         Self: Sync,
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
@@ -344,17 +363,23 @@ pub(crate) trait Drain {
                         elapsed.as_millis() as f64 / 1000.0
                     );
                 }
-                (jobs.to_vec(), slurm_jobs, job_id, wi, ws, ss)
+                (jobs.to_vec(), slurm_jobs, job_id, wi, ws, ss, chunk_num)
             })
             .collect();
 
-        for (jobs, sj, job_id, wi, ws, ss) in works {
+        for (jobs, sj, job_id, wi, ws, ss, cn) in works {
             slurm_jobs.extend(sj);
             time.writing_input += wi;
             time.writing_script += ws;
             time.submitting_script += ss;
             qstat.insert(job_id);
             cur_jobs.extend(jobs);
+            // necessary because par_bridge may swap order
+            if let Some(n) = *last_chunk {
+                *last_chunk = Some(usize::max(n, cn))
+            } else {
+                *last_chunk = Some(cn);
+            }
         }
     }
 }
