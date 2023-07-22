@@ -1,5 +1,10 @@
 use std::{
-    error::Error, fmt::Display, path::Path, str::FromStr, time::SystemTime,
+    error::Error,
+    fmt::Display,
+    marker::{PhantomData, Sized},
+    path::Path,
+    str::FromStr,
+    time::SystemTime,
 };
 
 use serde::{Deserialize, Serialize};
@@ -81,22 +86,78 @@ impl FromStr for Template {
 }
 
 #[derive(Clone)]
-pub struct JobIter<P: Program> {
-    jobs: Vec<Job<P>>,
+pub struct JobIter<I, P, D>
+where
+    I: Iterator<Item = Geom>,
+    P: Program,
+    D: AsRef<Path>,
+{
+    moles: I,
+    dir: D,
+    start_index: usize,
+    coeff: f64,
+    job_num: usize,
+    charge: isize,
+    tmpl: Template,
+    program: PhantomData<P>,
 }
 
-impl<P: Program> JobIter<P> {
-    fn new(mut jobs: Vec<Job<P>>) -> Self {
-        jobs.reverse();
-        Self { jobs }
+impl<I, P, D> JobIter<I, P, D>
+where
+    I: Iterator<Item = Geom>,
+    P: Program,
+    D: AsRef<Path>,
+{
+    fn new(
+        moles: impl IntoIterator<IntoIter = I>,
+        dir: D,
+        start_index: usize,
+        coeff: f64,
+        job_num: usize,
+        charge: isize,
+        tmpl: Template,
+    ) -> Self {
+        Self {
+            moles: moles.into_iter(),
+            program: PhantomData,
+            start_index,
+            job_num,
+            dir,
+            coeff,
+            charge,
+            tmpl,
+        }
     }
 }
 
-impl<P: Program> Iterator for JobIter<P> {
+impl<P, I, D> Iterator for JobIter<I, P, D>
+where
+    P: Program,
+    I: Iterator<Item = Geom>,
+    D: AsRef<Path>,
+{
     type Item = Job<P>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.jobs.pop()
+        let mol = self.moles.next()?;
+        let filename = format!("job.{:08}", self.job_num);
+        let filename = self
+            .dir
+            .as_ref()
+            .join(filename)
+            .to_str()
+            .unwrap()
+            .to_string();
+        let mut job = Job::new(
+            P::new(filename, self.tmpl.clone(), self.charge, mol),
+            self.start_index,
+        );
+        job.coeff = self.coeff;
+
+        self.job_num += 1;
+        self.start_index += 1;
+
+        Some(job)
     }
 }
 
@@ -145,35 +206,21 @@ pub trait Program {
 
     /// Build the jobs described by `moles` in memory, but don't write any of
     /// their files yet
-    fn build_jobs(
-        moles: Vec<Geom>,
-        dir: impl AsRef<Path>,
+    fn build_jobs<I, D>(
+        moles: impl IntoIterator<IntoIter = I>,
+        dir: D,
         start_index: usize,
         coeff: f64,
         job_num: usize,
         charge: isize,
         tmpl: Template,
-    ) -> JobIter<Self>
+    ) -> JobIter<I, Self, D>
     where
-        Self: std::marker::Sized,
+        Self: Sized,
+        I: Iterator<Item = Geom>,
+        D: AsRef<Path>,
     {
-        let mut count: usize = start_index;
-        let mut job_num = job_num;
-        let mut jobs = Vec::new();
-        for mol in moles {
-            let filename = format!("job.{job_num:08}");
-            let filename =
-                dir.as_ref().join(filename).to_str().unwrap().to_string();
-            job_num += 1;
-            let mut job = Job::new(
-                Self::new(filename, tmpl.clone(), charge, mol.clone()),
-                count,
-            );
-            job.coeff = coeff;
-            jobs.push(job);
-            count += 1;
-        }
-        JobIter::new(jobs)
+        JobIter::new(moles, dir, start_index, coeff, job_num, charge, tmpl)
     }
 }
 
