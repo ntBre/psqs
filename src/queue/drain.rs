@@ -104,6 +104,7 @@ pub(crate) trait Drain {
         // finished != 0. this is used to signal that case
         let mut cleanup_intervals =
             (0..total_jobs).step_by(job_limit).peekable();
+
         let mut chunks = jobs
             .chunks_mut(queue.chunk_size())
             .enumerate()
@@ -269,22 +270,13 @@ pub(crate) trait Drain {
             } = &check
             {
                 if *check_int > 0 && iter % check_int == 0 {
-                    let mut cur_jobs = cur_jobs.clone();
-                    // +1 because after the first chunk (chunk_num = 0) is written,
-                    // we want to slice from the next chunk on
-                    let cn = match last_chunk {
-                        Some(n) => n + 1,
-                        None => 0,
-                    };
-                    cur_jobs.extend(
-                        jobs_init
-                            [(cn * queue.chunk_size()).min(jobs_init.len())..]
-                            .to_vec(),
-                    );
-                    Self::write_checkpoint(
-                        &format!("{check_dir}/chk.json"),
-                        dst.to_vec(),
-                        cur_jobs,
+                    Self::do_checkpoint(
+                        &cur_jobs,
+                        last_chunk,
+                        &jobs_init,
+                        queue.chunk_size(),
+                        check_dir,
+                        dst,
                     );
                 }
             }
@@ -322,6 +314,35 @@ pub(crate) trait Drain {
         eprintln!("writing checkpoint to {checkpoint}");
         let f = std::fs::File::create(checkpoint).unwrap();
         serde_json::to_writer_pretty(f, &c).unwrap();
+    }
+
+    fn do_checkpoint<P>(
+        cur_jobs: &[Job<P>],
+        last_chunk: Option<usize>,
+        jobs_init: &Vec<Job<P>>,
+        chunk_size: usize,
+        check_dir: &str,
+        dst: &mut [<Self as Drain>::Item],
+    ) where
+        P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
+        Job<P>: Clone,
+        Self::Item: Serialize + Clone,
+    {
+        let mut cur_jobs = cur_jobs.to_vec();
+        // +1 because after the first chunk (chunk_num = 0) is written,
+        // we want to slice from the next chunk on
+        let cn = match last_chunk {
+            Some(n) => n + 1,
+            None => 0,
+        };
+        cur_jobs.extend(
+            jobs_init[(cn * chunk_size).min(jobs_init.len())..].to_vec(),
+        );
+        Self::write_checkpoint(
+            &format!("{check_dir}/chk.json"),
+            dst.to_vec(),
+            cur_jobs,
+        );
     }
 
     #[allow(clippy::too_many_arguments)]
