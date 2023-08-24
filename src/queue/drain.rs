@@ -114,6 +114,7 @@ pub(crate) trait Drain {
         let mut last_chunk = None;
         let mut to_remove = Vec::new();
         let mut resub = Resub::new(queue, dir, self.procedure());
+        let mut failed_jobs = 0;
         let mut iter = 0;
         loop {
             let loop_time = std::time::Instant::now();
@@ -175,12 +176,11 @@ pub(crate) trait Drain {
                     }
                     Err(e) => {
                         if e.is_error_in_output() {
-                            dump.shutdown();
-                            return Err(e);
-                        }
-                        // just overwrite the existing job with the resubmitted
-                        // version
-                        if !qstat.contains(&job.job_id) {
+                            eprintln!("warning: job failed with `{e}`");
+                            failed_jobs += 1;
+                        } else if !qstat.contains(&job.job_id) {
+                            // just overwrite the existing job with
+                            // the resubmitted version
                             let time = job.modtime();
                             if time > job.modtime {
                                 // file has been updated since we last looked at
@@ -246,6 +246,11 @@ pub(crate) trait Drain {
             }
             if cur_jobs.is_empty() && out_of_jobs {
                 dump.shutdown();
+                if failed_jobs > 0 {
+                    return Err(ProgramError::ErrorInOutput(format!(
+                        "{failed_jobs} jobs failed"
+                    )));
+                }
                 eprintln!("{time}");
                 return Ok(job_time);
             }
