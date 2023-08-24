@@ -248,6 +248,16 @@ pub(crate) trait Drain {
             if cur_jobs.is_empty() && out_of_jobs {
                 dump.shutdown();
                 if failed_jobs > 0 {
+                    if let Check::Some { check_dir, .. } = &check {
+                        Self::do_checkpoint(
+                            &cur_jobs,
+                            last_chunk,
+                            &jobs_init,
+                            queue.chunk_size(),
+                            check_dir,
+                            dst,
+                        );
+                    }
                     return Err(ProgramError::ErrorInOutput(format!(
                         "{failed_jobs} jobs failed"
                     )));
