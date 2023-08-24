@@ -132,8 +132,11 @@ where
             use std::fmt::Write;
             for f in infiles {
                 let basename = Path::new(f).file_name().unwrap();
-                writeln!(body, "molpro -t 1 --no-xml-output {basename:?}.inp")
-                    .unwrap();
+                writeln!(
+                    body,
+                    "molpro -t $NCPUS --no-xml-output {basename:?}.inp"
+                )
+                .unwrap();
             }
             writeln!(body, "rm -rf $TMPDIR").unwrap();
         }
@@ -155,7 +158,7 @@ where
 #PBS -j oe
 #PBS -o {{.basename}}.out
 #PBS -W umask=022
-#PBS -l walltime=9999:00:00
+#PBS -l walltime=1000:00:00
 #PBS -l ncpus=1
 #PBS -l mem=8gb
 #PBS -q workq
@@ -207,7 +210,7 @@ impl Queue<Mopac> for Pbs {
 #PBS -j oe
 #PBS -o {{.filename}}.out
 #PBS -W umask=022
-#PBS -l walltime=9999:00:00
+#PBS -l walltime=1000:00:00
 #PBS -l ncpus=1
 #PBS -l mem=1gb
 #PBS -q workq
