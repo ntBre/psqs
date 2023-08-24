@@ -132,8 +132,11 @@ where
             use std::fmt::Write;
             for f in infiles {
                 let basename = Path::new(f).file_name().unwrap();
-                writeln!(body, "molpro -t $NCPUS --no-xml-output {basename:?}.inp")
-                    .unwrap();
+                writeln!(
+                    body,
+                    "molpro -t $NCPUS --no-xml-output {basename:?}.inp"
+                )
+                .unwrap();
             }
             writeln!(body, "rm -rf $TMPDIR").unwrap();
         }
