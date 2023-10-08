@@ -4,9 +4,9 @@ use std::io::Write;
 
 use serde::{Deserialize, Serialize};
 
-use crate::program::molpro::Molpro;
 use crate::program::mopac::Mopac;
 use crate::program::Program;
+use crate::program::{dftbplus::DFTBPlus, molpro::Molpro};
 use crate::queue::Queue;
 
 use super::{SubQueue, Submit};
@@ -122,6 +122,16 @@ echo $SLURM_JOB_ID
 date
 hostname\n"
             .to_owned()
+    }
+}
+
+impl Queue<DFTBPlus> for Slurm {
+    fn default_submit_script(&self) -> String {
+        todo!()
+    }
+
+    fn write_submit_script(&self, _infiles: &[String], _filename: &str) {
+        todo!()
     }
 }
 

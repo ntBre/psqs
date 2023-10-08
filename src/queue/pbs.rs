@@ -6,6 +6,7 @@ use std::{collections::HashSet, process::Command};
 
 use serde::{Deserialize, Serialize};
 
+use crate::program::dftbplus::DFTBPlus;
 use crate::program::molpro::Molpro;
 use crate::program::mopac::Mopac;
 use crate::program::Program;
@@ -224,6 +225,18 @@ cd $WORKDIR
         .to_owned()
     }
 }
+
+impl Queue<DFTBPlus> for Pbs {
+    fn default_submit_script(&self) -> String {
+        todo!()
+    }
+
+    fn write_submit_script(&self, _infiles: &[String], _filename: &str) {
+        todo!()
+    }
+}
+
+impl Submit<DFTBPlus> for Pbs {}
 
 impl<P> SubQueue<P> for Pbs
 where
