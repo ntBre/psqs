@@ -1,10 +1,11 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::Write;
 
-use serde::{Deserialize, Serialize};
-
-use crate::program::Program;
+use crate::program::dftbplus::DFTBPlus;
+use crate::program::molpro::Molpro;
+use crate::program::{mopac::Mopac, Program};
 use crate::queue::Queue;
 
 use super::{SubQueue, Submit};
@@ -44,20 +45,21 @@ impl Local {
     }
 }
 
-impl<P> Submit<P> for Local where
-    P: Program + Clone + Serialize + for<'a> Deserialize<'a>
-{
+impl Submit<Molpro> for Local {}
+
+impl Queue<Molpro> for Local {
+    fn default_submit_script(&self) -> String {
+        todo!()
+    }
+
+    fn write_submit_script(&self, _infiles: &[String], _filename: &str) {
+        todo!()
+    }
 }
 
-impl<P> Queue<P> for Local
-where
-    P: Program
-        + Clone
-        + Send
-        + std::marker::Sync
-        + Serialize
-        + for<'a> Deserialize<'a>,
-{
+impl Submit<Mopac> for Local {}
+
+impl Queue<Mopac> for Local {
     fn write_submit_script(&self, infiles: &[String], filename: &str) {
         use std::fmt::Write;
         let mut body = String::from("export LD_LIBRARY_PATH=/opt/mopac/\n");
@@ -75,6 +77,18 @@ where
     }
 
     fn default_submit_script(&self) -> String {
+        todo!()
+    }
+}
+
+impl Submit<DFTBPlus> for Local {}
+
+impl Queue<DFTBPlus> for Local {
+    fn default_submit_script(&self) -> String {
+        todo!()
+    }
+
+    fn write_submit_script(&self, _infiles: &[String], _filename: &str) {
         todo!()
     }
 }
