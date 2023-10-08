@@ -44,7 +44,7 @@ ParserOptions {
     );
 
     let mut d = DFTBPlus {
-        filename: "/tmp/dftb_in.hsd".into(),
+        filename: "/tmp".into(),
         template,
         charge: 0,
         geom: Geom::from_str(
@@ -67,7 +67,7 @@ Geometry Step: 9
 
 #[test]
 fn read_opt_output() {
-    let got = DFTBPlus::read_output("testfiles/dftb+/opt/out").unwrap();
+    let got = DFTBPlus::read_output("testfiles/dftb+/opt").unwrap();
     let want = ProgramResult {
         energy: -4.0779379326,
         cart_geom: Some(vec![
@@ -82,7 +82,7 @@ fn read_opt_output() {
 
 #[test]
 fn read_single_output() {
-    let got = DFTBPlus::read_output("testfiles/dftb+/single/out").unwrap();
+    let got = DFTBPlus::read_output("testfiles/dftb+/single").unwrap();
     let want = ProgramResult {
         energy: -3.9798793068,
         cart_geom: None,

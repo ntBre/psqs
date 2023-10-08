@@ -139,7 +139,7 @@ impl Program for DFTBPlus {
             .to_string();
 
         let dir = Path::new(&self.filename);
-        std::fs::create_dir(&dir).unwrap_or_else(|e| {
+        std::fs::create_dir_all(dir).unwrap_or_else(|e| {
             panic!("failed to create {} with {e}", self.filename)
         });
         let mut file =
