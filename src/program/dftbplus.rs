@@ -141,20 +141,24 @@ impl Program for DFTBPlus {
             .replace(&body, &format!("{}", self.charge))
             .to_string();
 
-        let mut file = File::create(&self.filename).unwrap_or_else(|e| {
+        let dir = Path::new(&self.filename);
+        std::fs::create_dir(&dir).unwrap_or_else(|e| {
             panic!("failed to create {} with {e}", self.filename)
         });
+        let mut file =
+            File::create(dir.join("dftb_in.hsd")).unwrap_or_else(|e| {
+                panic!(
+                    "failed to create dftb input in {} with {e}",
+                    self.filename
+                )
+            });
         write!(file, "{body}").expect("failed to write input file");
     }
 
     fn read_output(filename: &str) -> Result<ProgramResult, ProgramError> {
         let path = Path::new(filename);
 
-        // because the input file always has to have the same name, we know
-        // there is a parent directory
-        let parent = path.parent().unwrap();
-
-        let outfile = parent.join("out");
+        let outfile = path.join("out");
         let outname = outfile.to_string_lossy().to_string();
         let contents = match read_to_string(&outfile) {
             Ok(s) => s,
@@ -205,7 +209,7 @@ impl Program for DFTBPlus {
         }
 
         // read xyz. TODO we only need to do this if it's an optimization
-        let geomfile = parent.join("geom.out.xyz");
+        let geomfile = path.join("geom.out.xyz");
         let cart_geom = if let Ok(s) = std::fs::read_to_string(&geomfile) {
             // always a proper XYZ file, so skip n atoms and comment lines
             let mut atoms = Vec::new();
