@@ -93,7 +93,7 @@ impl Queue<DFTBPlus> for Local {
         let mut body = String::new();
         // assume f is a directory name, not a real file
         for f in infiles {
-            writeln!(body, "(cd {f} && /opt/dftb+/dftb+ > out").unwrap();
+            writeln!(body, "(cd {f} && /opt/dftb+/dftb+ > out)").unwrap();
         }
         writeln!(body, "date +%s >> {filename}.out").unwrap();
         let mut file = File::create(filename).unwrap_or_else(|_| {
