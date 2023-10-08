@@ -88,8 +88,18 @@ impl Queue<DFTBPlus> for Local {
         todo!()
     }
 
-    fn write_submit_script(&self, _infiles: &[String], _filename: &str) {
-        todo!()
+    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+        use std::fmt::Write;
+        let mut body = String::new();
+        // assume f is a directory name, not a real file
+        for f in infiles {
+            writeln!(body, "(cd {f} && /opt/dftb+/dftb+ > out").unwrap();
+        }
+        writeln!(body, "date +%s >> {filename}.out").unwrap();
+        let mut file = File::create(filename).unwrap_or_else(|_| {
+            panic!("failed to create submit script `{filename}`")
+        });
+        write!(file, "{body}").expect("failed to write submit script");
     }
 }
 

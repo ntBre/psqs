@@ -23,6 +23,8 @@ static CELL: OnceLock<[Regex; 4]> = OnceLock::new();
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct DFTBPlus {
+    /// in this case, `filename` is actually a directory name because every
+    /// DFTB+ input file has to have the same name
     filename: String,
     template: Template,
     charge: isize,
