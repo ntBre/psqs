@@ -8,10 +8,7 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use symm::Atom;
 
-use crate::{
-    geom::{geom_string, Geom},
-    program::Procedure,
-};
+use crate::{geom::Geom, program::Procedure};
 
 use super::{Program, ProgramError, ProgramResult, Template};
 
@@ -130,11 +127,11 @@ impl Program for DFTBPlus {
                 }
             }
         }
-        let geom = geom_string(&self.geom);
-        let geom = if let Geom::Zmat(_) = &self.geom {
-            panic!("don't know how to handle a Z-matrix in dftb+");
-        } else {
-            format!("{geom}\n")
+        let geom = match &self.geom {
+            Geom::Zmat(_) => {
+                panic!("don't know how to handle a Z-matrix in dftb+");
+            }
+            geom @ Geom::Xyz(atoms) => format!("{}\n\n{geom}\n", atoms.len()),
         };
         body = geom_re.replace(&body, geom).to_string();
         body = charge
