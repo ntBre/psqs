@@ -352,4 +352,15 @@ Geometry Step: 9
         };
         assert_eq!(got, want);
     }
+
+    #[test]
+    fn read_single_output() {
+        let got = DFTBPlus::read_output("testfiles/dftb+/single/out").unwrap();
+        let want = ProgramResult {
+            energy: -3.9798793068,
+            cart_geom: None,
+            time: 0.03,
+        };
+        assert_eq!(got, want);
+    }
 }
