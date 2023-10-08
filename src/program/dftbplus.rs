@@ -17,7 +17,7 @@ use super::{Program, ProgramError, ProgramResult, Template};
 static INPUT_CELL: OnceLock<[Regex; 3]> = OnceLock::new();
 static CELL: OnceLock<[Regex; 4]> = OnceLock::new();
 
-struct DFTBPlus {
+pub struct DFTBPlus {
     filename: String,
     template: Template,
     charge: isize,
