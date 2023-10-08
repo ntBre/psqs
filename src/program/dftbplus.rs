@@ -220,5 +220,8 @@ Geometry Step: 9
 
         d.write_input(Procedure::Opt);
         check!("testfiles/dftb+/single_opt.want", "/tmp/dftb_in.hsd");
+
+        d.write_input(Procedure::SinglePt);
+        check!("testfiles/dftb+/single_single.want", "/tmp/dftb_in.hsd");
     }
 }
