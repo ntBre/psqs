@@ -82,17 +82,20 @@ HCC =               147.81488230
 
 /// in these names, the first word is the template type (opt => optg line
 /// included in template, for example), and the second word is the Procedure
-mod write_input {
+pub(crate) mod write_input {
     use super::*;
 
+    #[macro_export]
     macro_rules! check {
         ($want_file: expr) => {
-            let got_file = "/tmp/opt.inp";
+            check!($want_file, "/tmp/opt.inp");
+        };
+        ($want_file: expr, $got_file: expr) => {
             let want_file = $want_file;
-            let got = read_to_string(got_file).expect("file not found");
+            let got = read_to_string($got_file).expect("file not found");
             let want = read_to_string(want_file).unwrap();
             if got != want {
-                panic!("\n(diff \"{}\" \"{}\")", got_file, want_file);
+                panic!("\n(diff \"{}\" \"{}\")", $got_file, want_file);
             }
         };
     }

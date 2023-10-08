@@ -11,7 +11,7 @@ use crate::geom::{geom_string, Geom};
 use super::{Procedure, Program, ProgramError, ProgramResult, Template};
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod tests;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Molpro {

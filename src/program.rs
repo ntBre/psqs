@@ -7,6 +7,7 @@ use symm::Atom;
 
 use crate::geom::Geom;
 
+pub mod dftbplus;
 pub mod molpro;
 pub mod mopac;
 

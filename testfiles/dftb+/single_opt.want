@@ -1,0 +1,40 @@
+
+Geometry = xyzFormat {
+O 0.000000000000 -0.716033150000 0.000000000000
+H 0.000000000000 -0.142002980000 0.778448040000
+H -0.000000000000 -0.142002980000 -0.778448040000
+
+
+}
+
+Hamiltonian = DFTB {
+  Scc = Yes
+  SlaterKosterFiles = Type2FileNames {
+    Prefix = "/opt/dftb+/slako/mio/mio-1-1/"
+    Separator = "-"
+    Suffix = ".skf"
+  }
+  MaxAngularMomentum {
+    O = "p"
+    H = "s"
+  }
+  Charge = 0
+}
+
+Options {
+}
+
+Analysis {
+  CalculateForces = Yes
+}
+
+ParserOptions {
+  ParserVersion = 12
+}
+Driver = GeometryOptimization {
+  Optimizer = Rational {}
+  MovedAtoms = 1:-1
+  MaxSteps = 100
+  OutputPrefix = "geom.out"
+  Convergence {GradAMax = 1E-8}
+}
