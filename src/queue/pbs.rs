@@ -257,7 +257,7 @@ export DFTB_PATH=/ddn/home1/r2518/.conda/envs/dftb/bin/dftb+
             .template
             .clone()
             .unwrap_or_else(|| {
-                <Self as Queue<Mopac>>::default_submit_script(self)
+                <Self as Queue<DFTBPlus>>::default_submit_script(self)
             })
             .replace("{{.basename}}", basename.to_str().unwrap())
             .replace("{{.filename}}", filename);
