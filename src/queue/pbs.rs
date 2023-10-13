@@ -272,7 +272,14 @@ export DFTB_PATH=/ddn/home1/r2518/.conda/envs/dftb/bin/dftb+
     }
 }
 
-impl Submit<DFTBPlus> for Pbs {}
+impl Submit<DFTBPlus> for Pbs {
+    fn submit(&self, filename: &str) -> String {
+        let mut cmd =
+            Command::new(<Self as SubQueue<DFTBPlus>>::submit_command(self));
+        let cmd = cmd.arg("-f").arg(filename);
+        submit_inner(cmd, self.sleep_int).unwrap()
+    }
+}
 
 impl<P> SubQueue<P> for Pbs
 where
