@@ -113,7 +113,13 @@ impl Program for DFTBPlus {
   MovedAtoms = 1:-1
   MaxSteps = 100
   OutputPrefix = "geom.out"
-  Convergence {{GradAMax = 1E-8}}
+  Convergence {{
+        Energy = 1e-8
+        GradElem = 1e-7
+        GradNorm = 1e-7
+        DispElem = 1e-7
+        DispNorm = 1e-7
+}}
 }}"#,
                         )
                         .unwrap();
