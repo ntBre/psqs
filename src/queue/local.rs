@@ -92,8 +92,9 @@ impl Queue<DFTBPlus> for Local {
         use std::fmt::Write;
         let mut body = String::new();
         // assume f is a directory name, not a real file
+        let c = std::env::var("DFTB_PATH").unwrap_or("/opt/dftb+/dftb+".into());
         for f in infiles {
-            writeln!(body, "(cd {f} && /opt/dftb+/dftb+ > out)").unwrap();
+            writeln!(body, "(cd {f} && {c} > out)").unwrap();
         }
         writeln!(body, "date +%s >> {filename}.out").unwrap();
         let mut file = File::create(filename).unwrap_or_else(|_| {
