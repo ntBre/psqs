@@ -213,7 +213,7 @@ impl Program for DFTBPlus {
 
         // read xyz. TODO we only need to do this if it's an optimization
         let geomfile = path.join("geom.out.xyz");
-        let cart_geom = if let Ok(s) = std::fs::read_to_string(&geomfile) {
+        let cart_geom = if let Ok(s) = std::fs::read_to_string(geomfile) {
             // always a proper XYZ file, so skip n atoms and comment lines
             let mut atoms = Vec::new();
             for line in s.lines().skip(2) {
