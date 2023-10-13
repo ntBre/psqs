@@ -228,11 +228,47 @@ cd $WORKDIR
 
 impl Queue<DFTBPlus> for Pbs {
     fn default_submit_script(&self) -> String {
-        todo!()
+        "#!/bin/sh
+#PBS -N {{.basename}}
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -o {{.filename}}.out
+#PBS -W umask=022
+#PBS -l walltime=1000:00:00
+#PBS -l ncpus=1
+#PBS -l mem=8gb
+#PBS -q workq
+
+module load openpbs
+
+export WORKDIR=$PBS_O_WORKDIR
+cd $WORKDIR
+
+export DFTB_PATH=/ddn/home1/r2518/.conda/envs/dftb/bin/dftb+
+"
+        .to_owned()
     }
 
-    fn write_submit_script(&self, _infiles: &[String], _filename: &str) {
-        todo!()
+    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+        use std::fmt::Write;
+        let path = Path::new(filename);
+        let basename = path.file_name().unwrap();
+        let mut body = self
+            .template
+            .clone()
+            .unwrap_or_else(|| {
+                <Self as Queue<Mopac>>::default_submit_script(self)
+            })
+            .replace("{{.basename}}", basename.to_str().unwrap())
+            .replace("{{.filename}}", filename);
+        for f in infiles {
+            writeln!(body, "(cd {f} && $DFTB_PATH > out)").unwrap();
+        }
+        let Ok(mut file) = File::create(filename) else {
+            eprintln!("write_submit_script: failed to create {filename}");
+            std::process::exit(1);
+        };
+        write!(file, "{body}").expect("failed to write DFTB+ PBS file");
     }
 }
 
