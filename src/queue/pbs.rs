@@ -18,12 +18,12 @@ use super::{SubQueue, Submit};
 /// `filename` is the name of the Pbs submission script
 #[derive(Debug)]
 pub struct Pbs {
-    chunk_size: usize,
-    job_limit: usize,
-    sleep_int: usize,
-    dir: &'static str,
-    no_del: bool,
-    template: Option<String>,
+    pub chunk_size: usize,
+    pub job_limit: usize,
+    pub sleep_int: usize,
+    pub dir: &'static str,
+    pub no_del: bool,
+    pub template: Option<String>,
 }
 
 impl Pbs {
