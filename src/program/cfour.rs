@@ -72,7 +72,7 @@ impl Program for Cfour {
                 if !self.geom.is_zmat() {
                     panic!("CFOUR requires Z-matrix for optimization");
                 }
-                body = body.replace("{{.keywords}}", "");
+                body = body.replace("{{.keywords}}", "COORD=INTERNAL");
             }
             Procedure::SinglePt => {
                 if !self.geom.is_xyz() {
