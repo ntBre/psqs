@@ -25,7 +25,6 @@ pub struct Cfour {
     geom: Geom,
 }
 
-static INPUT_CELL: OnceLock<[Regex; 3]> = OnceLock::new();
 static CELL: OnceLock<[Regex; 4]> = OnceLock::new();
 
 impl Program for Cfour {
@@ -307,7 +306,7 @@ mod tests {
     fn read_output() {
         let got = Cfour::read_output("testfiles/cfour").unwrap();
         let want = ProgramResult {
-            energy: -76.338010630480653,
+            energy: -76.33801063048065,
             cart_geom: Some(vec![
                 Atom::new(8, -0.0000000000, 0.0000000000, 0.1243564077),
                 Atom::new(1, 0.0000000000, -1.4232661785, -0.9868132143),
