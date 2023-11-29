@@ -1,4 +1,8 @@
-use std::{fs::read_to_string, path::Path, sync::OnceLock};
+use std::{
+    fs::{read_to_string, File},
+    path::Path,
+    sync::OnceLock,
+};
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -50,8 +54,45 @@ impl Program for Cfour {
         self.charge
     }
 
+    /// Example [Template]:
+    /// ```text
+    /// comment line
+    /// {{.geom}}
+    ///
+    /// *CFOUR(CALC=CCSD,BASIS=PVTZ,MEMORY_SIZE=8,MEM_UNIT=GB,REF=RHF,MULT=1
+    /// {{.keywords}})
+    /// ```
     fn write_input(&mut self, proc: Procedure) {
-        todo!()
+        use std::io::Write;
+        let mut body = self.template().clone().header;
+        // always just paste in the geometry, assume it's a zmat for
+        // optimization and cartesian for single point
+        body = body.replace("{{.geom}}", &self.geom.to_string());
+        match proc {
+            Procedure::Opt => {
+                if !self.geom.is_zmat() {
+                    panic!("CFOUR requires Z-matrix for optimization");
+                }
+            }
+            Procedure::SinglePt => {
+                if !self.geom.is_xyz() {
+                    panic!(
+                        "pbqff expects Cartesian geometry for single-points"
+                    );
+                }
+                // default units are Angstrom
+                body = body.replace("{{.keywords}}", "COORD=CARTESIAN");
+            }
+            Procedure::Freq => todo!(),
+        };
+        let dir = Path::new(&self.filename);
+        std::fs::create_dir_all(dir).unwrap_or_else(|e| {
+            panic!("failed to create {} with {e}", self.filename)
+        });
+        let mut file = File::create(dir.join("ZMAT")).unwrap_or_else(|e| {
+            panic!("failed to create dftb input in {} with {e}", self.filename)
+        });
+        write!(file, "{body}").expect("failed to write input file");
     }
 
     fn read_output(filename: &str) -> Result<ProgramResult, ProgramError> {
@@ -220,7 +261,11 @@ impl Queue<Cfour> for Local {
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use symm::Atom;
+
+    use crate::check;
 
     use super::*;
 
@@ -237,5 +282,34 @@ mod tests {
             time: 55.263,
         };
         assert_eq!(got, want);
+    }
+
+    #[test]
+    fn write_input() {
+        let template = Template::from(
+            "comment line
+{{.geom}}
+
+*CFOUR(CALC=CCSD,BASIS=PVTZ,MEMORY_SIZE=8,MEM_UNIT=GB,REF=RHF,MULT=1
+{{.keywords}})
+",
+        );
+
+        let mut d = Cfour {
+            filename: "/tmp".into(),
+            template,
+            charge: 0,
+            geom: Geom::from_str(
+                "
+O        -0.000000000         0.000000000         0.065806577
+H         0.000000000        -0.753160027        -0.522199064
+H         0.000000000         0.753160027        -0.522199064
+",
+            )
+            .unwrap(),
+        };
+
+        d.write_input(Procedure::SinglePt);
+        check!("testfiles/cfour/ZMAT.want", "/tmp/ZMAT");
     }
 }
