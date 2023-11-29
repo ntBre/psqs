@@ -6,7 +6,7 @@ use std::{
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use symm::Atom;
+use symm::{Atom, ANGBOHR};
 
 use crate::{
     geom::Geom,
@@ -72,6 +72,7 @@ impl Program for Cfour {
                 if !self.geom.is_zmat() {
                     panic!("CFOUR requires Z-matrix for optimization");
                 }
+                body = body.replace("{{.keywords}}", "");
             }
             Procedure::SinglePt => {
                 if !self.geom.is_xyz() {
@@ -166,9 +167,9 @@ impl Program for Cfour {
                 let mut sp = line.split_ascii_whitespace();
                 atoms.push(Atom::new(
                     sp.nth(2).unwrap().parse().unwrap(),
-                    sp.next().unwrap().parse().unwrap(),
-                    sp.next().unwrap().parse().unwrap(),
-                    sp.next().unwrap().parse().unwrap(),
+                    sp.next().unwrap().parse::<f64>().unwrap() * ANGBOHR,
+                    sp.next().unwrap().parse::<f64>().unwrap() * ANGBOHR,
+                    sp.next().unwrap().parse::<f64>().unwrap() * ANGBOHR,
                 ));
             }
             Some(atoms)
@@ -308,9 +309,19 @@ mod tests {
         let want = ProgramResult {
             energy: -76.33801063048065,
             cart_geom: Some(vec![
-                Atom::new(8, -0.0000000000, 0.0000000000, 0.1243564077),
-                Atom::new(1, 0.0000000000, -1.4232661785, -0.9868132143),
-                Atom::new(1, 0.0000000000, 1.4232661785, -0.9868132143),
+                Atom::new(8, -0.0000000000, 0.0000000000, 0.06580655821884736),
+                Atom::new(
+                    1,
+                    0.0000000000,
+                    -0.7531598119360652,
+                    -0.522198915512423,
+                ),
+                Atom::new(
+                    1,
+                    0.0000000000,
+                    0.7531598119360652,
+                    -0.5221989155124239,
+                ),
             ]),
             time: 55.263,
         };
