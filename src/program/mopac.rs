@@ -264,9 +264,7 @@ impl Mopac {
     /// `filename` should not include the .aux extension
     pub fn read_aux(filename: &str) -> Result<ProgramResult, ProgramError> {
         let auxfile = format!("{}.aux", &filename);
-        let f = if let Ok(file) = File::open(&auxfile) {
-            file
-        } else {
+        let Ok(f) = File::open(&auxfile) else {
             return Err(ProgramError::FileNotFound(auxfile));
         };
         let mut energy = None;
