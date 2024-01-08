@@ -269,7 +269,7 @@ impl Mopac {
         } else {
             return Err(ProgramError::FileNotFound(auxfile));
         };
-        let lines = BufReader::new(f).lines().flatten();
+        let lines = BufReader::new(f).lines().map_while(Result::ok);
         let mut energy = None;
 
         let [heat_re, atom_re, elt_re, charge_re, time_re] = READ_AUX_CELL

@@ -329,7 +329,7 @@ pub(crate) trait Drain {
     fn do_checkpoint<P>(
         cur_jobs: &[Job<P>],
         last_chunk: Option<usize>,
-        jobs_init: &Vec<Job<P>>,
+        jobs_init: &[Job<P>],
         chunk_size: usize,
         check_dir: &str,
         dst: &mut [<Self as Drain>::Item],
