@@ -198,16 +198,15 @@ impl Program for DFTBPlus {
                         .unwrap_or_else(|e| panic!("{e:#?}")),
                 );
             } else if energy_re.is_match(line) {
-                let energy_str = line.split_whitespace().nth(2);
-                if let Some(e) = energy_str {
-                    energy = if let Ok(v) = e.parse::<f64>() {
-                        Some(v)
-                    } else {
-                        return Err(ProgramError::EnergyParseError(outname));
-                    }
-                } else {
+                let Ok(some @ Some(_)) = line
+                    .split_whitespace()
+                    .nth(2)
+                    .map(str::parse::<f64>)
+                    .transpose()
+                else {
                     return Err(ProgramError::EnergyParseError(outname));
-                }
+                };
+                energy = some;
             }
         }
 
