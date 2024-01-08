@@ -318,10 +318,9 @@ where
         let user = std::env::var("USER").expect("couldn't find $USER env var");
         let status = match Command::new("qstat").args(["-u", &user]).output() {
             Ok(status) => status,
-            Err(e) => panic!("failed to run squeue with {e}"),
+            Err(e) => panic!("failed to run `qstat -u {user}` with {e}"),
         };
-        String::from_utf8(status.stdout)
-            .expect("failed to convert squeue output to String")
+        String::from_utf8(status.stdout).expect("failed to parse qstat output")
     }
 
     fn status(&self) -> HashSet<String> {
