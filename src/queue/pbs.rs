@@ -310,10 +310,10 @@ where
     /// run `qstat -u $USER`. form of the output is:
     ///
     /// maple:
-    ///                                                             Req'd  Req'd   Elap
-    /// Job ID          Username Queue    Jobname    SessID NDS TSK Memory Time  S Time
-    /// --------------- -------- -------- ---------- ------ --- --- ------ ----- - -----
-    /// 819446          user     queue    C6HNpts      5085   1   1    8gb 26784 R 00:00
+    ///                                                     Req'd  Req'd   Elap
+    /// Job ID  Username Queue    Jobname    SessID NDS TSK Memory Time  S Time
+    /// ------- -------- -------- ---------- ------ --- --- ------ ----- - -----
+    /// 819446  user     queue    C6HNpts      5085   1   1    8gb 26784 R 00:00
     fn stat_cmd(&self) -> String {
         let user = std::env::var("USER").expect("couldn't find $USER env var");
         let status = match Command::new("qstat").args(["-u", &user]).output() {
