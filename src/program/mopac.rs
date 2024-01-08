@@ -269,7 +269,6 @@ impl Mopac {
         } else {
             return Err(ProgramError::FileNotFound(auxfile));
         };
-        let lines = BufReader::new(f).lines().map_while(Result::ok);
         let mut energy = None;
 
         let [heat_re, atom_re, elt_re, charge_re, time_re] = READ_AUX_CELL
@@ -308,7 +307,7 @@ impl Mopac {
         // coordinates
         let mut coords = Vec::new();
         let mut time = 0.0;
-        for line in lines {
+        for line in BufReader::new(f).lines().map_while(Result::ok) {
             if !guard.element && elt_re.is_match(&line) {
                 state = State::Labels;
                 guard.element = true;
