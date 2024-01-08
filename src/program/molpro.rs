@@ -8,7 +8,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::geom::{geom_string, Geom};
 
-use super::{Procedure, Program, ProgramError, ProgramResult, Template};
+use super::{
+    parse_energy, Procedure, Program, ProgramError, ProgramResult, Template,
+};
 
 #[cfg(test)]
 pub(crate) mod tests;
@@ -203,15 +205,7 @@ impl Program for Molpro {
                     .parse()
                     .unwrap_or_else(|e| panic!("{e:#?}"));
             } else if energy_re.is_match(line) {
-                let Ok(some @ Some(_)) = line
-                    .split_whitespace()
-                    .nth(2)
-                    .map(str::parse::<f64>)
-                    .transpose()
-                else {
-                    return Err(ProgramError::EnergyParseError(outfile));
-                };
-                energy = some;
+                energy = parse_energy(line, 2, &outfile)?;
             } else if geom_re.is_match(line) {
                 skip = 3;
                 geom = true;

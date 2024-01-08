@@ -13,7 +13,9 @@ use crate::{
     queue::{local::Local, pbs::Pbs, slurm::Slurm, Queue, Submit},
 };
 
-use super::{Procedure, Program, ProgramError, ProgramResult, Template};
+use super::{
+    parse_energy, Procedure, Program, ProgramError, ProgramResult, Template,
+};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct Cfour {
@@ -142,16 +144,7 @@ impl Program for Cfour {
                         .unwrap(),
                 );
             } else if energy_re.is_match(line) {
-                let energy_str = line.split_whitespace().nth(5);
-                if let Some(e) = energy_str {
-                    energy = if let Ok(v) = e.parse::<f64>() {
-                        Some(v)
-                    } else {
-                        return Err(ProgramError::EnergyParseError(outname));
-                    }
-                } else {
-                    return Err(ProgramError::EnergyParseError(outname));
-                }
+                energy = parse_energy(line, 5, &outname)?;
             }
         }
 

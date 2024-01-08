@@ -10,7 +10,7 @@ use symm::Atom;
 
 use crate::{geom::Geom, program::Procedure};
 
-use super::{Program, ProgramError, ProgramResult, Template};
+use super::{parse_energy, Program, ProgramError, ProgramResult, Template};
 
 #[cfg(test)]
 mod tests;
@@ -198,15 +198,7 @@ impl Program for DFTBPlus {
                         .unwrap_or_else(|e| panic!("{e:#?}")),
                 );
             } else if energy_re.is_match(line) {
-                let Ok(some @ Some(_)) = line
-                    .split_whitespace()
-                    .nth(2)
-                    .map(str::parse::<f64>)
-                    .transpose()
-                else {
-                    return Err(ProgramError::EnergyParseError(outname));
-                };
-                energy = some;
+                energy = parse_energy(line, 2, &outname)?;
             }
         }
 
