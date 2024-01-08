@@ -129,21 +129,23 @@ impl Program for Molpro {
                 }
             }
         }
-        let geom = geom_string(&self.geom);
-        let geom = if let Geom::Zmat(_) = &self.geom {
-            use std::fmt::Write;
-            let mut new_lines = String::new();
-            let mut found = false;
-            for line in geom.lines() {
-                if line.contains('=') && !found {
-                    found = true;
-                    new_lines.push_str("}\n");
+        let geom = match &self.geom {
+            Geom::Zmat(geom) => {
+                // inserting } and newline before ZMAT parameters
+                let mut new_lines = String::with_capacity(geom.len() + 2);
+                let mut found = false;
+                for line in geom.lines() {
+                    if line.contains('=') && !found {
+                        found = true;
+                        new_lines.push('}');
+                        new_lines.push('\n');
+                    }
+                    new_lines.push_str(line);
+                    new_lines.push('\n');
                 }
-                writeln!(new_lines, "{line}").unwrap();
+                new_lines
             }
-            new_lines
-        } else {
-            format!("{geom}\n}}\n")
+            x @ Geom::Xyz(_) => format!("{geom}\n}}\n", geom = geom_string(x)),
         };
         body = geom_re.replace(&body, geom).to_string();
         body = charge
