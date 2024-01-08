@@ -315,11 +315,8 @@ where
     /// --------------- -------- -------- ---------- ------ --- --- ------ ----- - -----
     /// 819446          user     queue    C6HNpts      5085   1   1    8gb 26784 R 00:00
     fn stat_cmd(&self) -> String {
-        let user = std::env::vars()
-            .find(|x| x.0 == "USER")
-            .expect("couldn't find $USER env var");
-        let status = match Command::new("qstat").args(["-u", &user.1]).output()
-        {
+        let user = std::env::var("USER").expect("couldn't find $USER env var");
+        let status = match Command::new("qstat").args(["-u", &user]).output() {
             Ok(status) => status,
             Err(e) => panic!("failed to run squeue with {e}"),
         };

@@ -166,11 +166,9 @@ where
     ///    JOBID PARTITION   NAME     USER ST        TIME  NODES NODELIST(REASON)
     /// 30627992   compute  c3oh-   mdavis  R 46-17:12:23      1 node2
     fn stat_cmd(&self) -> String {
-        let user = std::env::vars()
-            .find(|x| x.0 == "USER")
-            .expect("couldn't find $USER env var");
+        let user = std::env::var("USER").expect("couldn't find $USER env var");
         let status = match std::process::Command::new("squeue")
-            .args(["-u", &user.1])
+            .args(["-u", &user])
             .output()
         {
             Ok(status) => status,
