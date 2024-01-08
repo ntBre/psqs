@@ -198,3 +198,19 @@ impl<P: Program> Job<P> {
         }
     }
 }
+
+/// parses the `nth` field of `line` into a float and returns
+/// [ProgramError::EnergyParseError] containing `outname` if it fails. a string
+/// containing `outname` is allocated in the Err case
+#[inline]
+fn parse_energy(
+    line: &str,
+    nth: usize,
+    outname: &str,
+) -> Result<Option<f64>, ProgramError> {
+    line.split_whitespace()
+        .nth(nth)
+        .map(str::parse::<f64>)
+        .transpose()
+        .map_err(|_| ProgramError::EnergyParseError(outname.to_owned()))
+}
