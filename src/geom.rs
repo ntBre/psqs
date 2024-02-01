@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, str::FromStr};
+use std::{collections::HashMap, fmt::Display, str::FromStr};
 use symm::atom::Atom;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -72,10 +72,23 @@ impl FromStr for Geom {
 }
 
 impl Geom {
+    /// returns a reference to `self`'s atoms if it is already an XYZ geometry
+    /// or None for a Z-matrix. see [Geom::into_xyz] for a version that returns
+    /// the atoms or converts the Z-matrix if needed.
     pub fn xyz(&self) -> Option<&Vec<Atom>> {
         match &self {
             Geom::Xyz(x) => Some(x),
             Geom::Zmat(_) => None,
+        }
+    }
+
+    /// returns the inner atoms if `self` is already an XYZ geometry or
+    /// constructs them from the Z-matrix if not. panics if the Z-matrix cannot
+    /// be converted to XYZ
+    pub fn into_xyz(self) -> Vec<Atom> {
+        match self {
+            Geom::Xyz(atoms) => atoms,
+            Geom::Zmat(s) => zmat_to_xyz(&s),
         }
     }
 
@@ -93,6 +106,82 @@ impl Geom {
     pub fn is_zmat(&self) -> bool {
         matches!(self, Geom::Zmat(_))
     }
+}
+
+/// call `eprintln` with the arguments and then exit(1)
+macro_rules! die {
+    ($($t:tt)+) => {
+        eprintln!($($t)*);
+        std::process::exit(1);
+    };
+}
+
+pub(crate) fn zmat_to_xyz(s: &str) -> Vec<Atom> {
+    let mut params = HashMap::new(); /* first pass for gathering parameters */
+    let mut atom_lines = Vec::new();
+    let mut sp = Vec::new();
+    for line in s.lines().filter(|s| !s.trim().is_empty()) {
+        if line.contains('=') {
+            line.split_ascii_whitespace().collect_into(&mut sp);
+            params.insert(sp[0], sp[2]);
+            sp.clear();
+        } else {
+            atom_lines.push(line);
+        }
+    }
+
+    let mut atoms = Vec::new();
+    for atom in atom_lines {
+        atom.split_ascii_whitespace().collect_into(&mut sp);
+        match sp.len() {
+            1 => {
+                // put the first atom at 0, 0, 0
+                atoms.push(Atom::new_from_label(sp[0], 0.0, 0.0, 0.0))
+            }
+            3 => {
+                // second atom along x axis
+                let x = get_parameter(&params, sp[2]);
+                atoms.push(Atom::new_from_label(sp[0], x, 0.0, 0.0));
+            }
+            5 => {
+                // third atom - use a 2D rotation matrix
+                // https://stackoverflow.com/a/11774765:
+                // (x cos θ + y sin θ, -x sin θ + y cos θ), but we know y is
+                // zero, giving (x cos θ, -x sin θ). the answer also states that
+                // this will give the magnitude in terms of the known vector, so
+                // we need to divide by its magnitude and multiply by the new
+                // magnitude. again, the magnitude is x, so the answer becomes
+                // (r cos θ, -r sin θ), where r is the new parameter's magnitude
+                let r = get_parameter(&params, sp[2]);
+                let t = get_parameter(&params, sp[4]).to_radians();
+                atoms.push(Atom::new_from_label(
+                    sp[0],
+                    r * t.cos(),
+                    -r * t.sin(),
+                    0.0,
+                ));
+            }
+            7 => {
+                todo!()
+            }
+            _ => {
+                eprintln!("malformed Z-matrix entry: {atom}");
+                std::process::exit(1);
+            }
+        }
+        sp.clear();
+    }
+    atoms
+}
+
+fn get_parameter(params: &HashMap<&str, &str>, s: &str) -> f64 {
+    let Some(x) = params.get(s) else {
+        die!("unrecognized parameter `{s}` in Z-matrix");
+    };
+    let Ok(x) = x.parse::<f64>() else {
+        die!("failed to parse {x} as a float in Z-matrix");
+    };
+    x
 }
 
 pub fn geom_string(geom: &Geom) -> String {

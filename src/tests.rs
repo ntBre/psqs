@@ -1,4 +1,4 @@
-use crate::geom::Geom;
+use crate::geom::{zmat_to_xyz, Geom};
 use symm::Atom;
 
 #[test]
@@ -31,5 +31,28 @@ water geometry
             Atom::new(8, 0.0000000000, 0.0000000000, -0.0657441568),
             Atom::new(1, 0.0000000000, -0.7574590974, 0.5217905143),
         ])
+    );
+}
+
+#[test]
+fn test_zmat_to_xyz() {
+    let s = "H
+O 1 OH
+H 2 OH 1 HOH
+
+OH = 1.0
+HOH = 180.0";
+    let got = zmat_to_xyz(s);
+    let want = vec![
+        Atom::new(1, 0.0, 0.0, 0.0),
+        Atom::new(8, 1.0, 0.0, 0.0),
+        Atom::new(1, -1.0, 0.0, 0.0),
+    ];
+    assert_eq!(
+        got,
+        want,
+        "got =\n{}\nwant =\n{}",
+        Geom::Xyz(got.clone()),
+        Geom::Xyz(want.clone())
     );
 }
