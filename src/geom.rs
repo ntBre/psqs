@@ -78,6 +78,7 @@ impl Geom {
             Geom::Zmat(_) => None,
         }
     }
+
     pub fn zmat(&self) -> Option<&String> {
         match &self {
             Geom::Zmat(x) => Some(x),
@@ -88,6 +89,7 @@ impl Geom {
     pub fn is_xyz(&self) -> bool {
         matches!(self, Geom::Xyz(_))
     }
+
     pub fn is_zmat(&self) -> bool {
         matches!(self, Geom::Zmat(_))
     }
