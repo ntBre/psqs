@@ -162,6 +162,17 @@ pub(crate) fn zmat_to_xyz(s: &str) -> Vec<Atom> {
                 ));
             }
             7 => {
+                let r = get_parameter(&params, sp[2]);
+                let t = get_parameter(&params, sp[4]).to_radians();
+                let p = get_parameter(&params, sp[6]).to_radians();
+                let a1 = atoms[parse_or_die::<usize>(sp[3]) - 1];
+                dbg!(atom, a1);
+                // this time we actually have to look up the atom it makes an
+                // angle with and handle a rotation in 3D. this one is also not
+                // necessarily about the origin. we will also need the central
+                // atom because the vectors are relative to that, not the
+                // origin. otherwise an angle with atom 1 (0,0,0) wouldn't make
+                // much sense
                 todo!()
             }
             _ => {
@@ -172,6 +183,13 @@ pub(crate) fn zmat_to_xyz(s: &str) -> Vec<Atom> {
         sp.clear();
     }
     atoms
+}
+
+#[inline]
+fn parse_or_die<T: FromStr>(s: &str) -> T {
+    s.parse::<T>().unwrap_or_else(|_| {
+        die!("failed to parse `{s}` as {}", std::any::type_name::<T>());
+    })
 }
 
 fn get_parameter(params: &HashMap<&str, &str>, s: &str) -> f64 {
