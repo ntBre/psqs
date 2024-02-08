@@ -17,8 +17,10 @@ supported programs is as follows:
 
 The following quantum chemistry programs are supported:
 
-- [x] MOPAC
-- [x] Molpro
+- [x] [MOPAC][mopac]
+- [x] [Molpro][molpro]
+- [x] [CFOUR][cfour]
+- [x] [DFTB+][dftb+]
 - [ ] Gaussian
 
 ## Queuing systems
@@ -28,3 +30,7 @@ The following queuing systems are supported:
 - [x] Slurm
 - [x] PBS
 
+[mopac]: http://openmopac.net/
+[molpro]: https://www.molpro.net/
+[cfour]: https://cfour.uni-mainz.de/cfour/
+[dftb+]: https://dftbplus.org/
