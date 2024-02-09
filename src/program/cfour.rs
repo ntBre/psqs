@@ -61,6 +61,7 @@ impl Program for Cfour {
     /// {{.geom}}
     ///
     /// *CFOUR(CALC=CCSD,BASIS=PVTZ,MEMORY_SIZE=8,MEM_UNIT=GB,REF=RHF,MULT=1
+    /// {{.charge}}
     /// {{.keywords}})
     /// ```
     fn write_input(&mut self, proc: Procedure) {
@@ -68,7 +69,9 @@ impl Program for Cfour {
         let mut body = self.template().clone().header;
         // always just paste in the geometry, assume it's a zmat for
         // optimization and cartesian for single point
-        body = body.replace("{{.geom}}", &self.geom.to_string());
+        body = body
+            .replace("{{.geom}}", &self.geom.to_string())
+            .replace("{{.charge}}", &format!("CHARGE={}", self.charge));
         match proc {
             Procedure::Opt => {
                 if !self.geom.is_zmat() {
@@ -348,5 +351,35 @@ H         0.000000000         0.753160027        -0.522199064
 
         d.write_input(Procedure::SinglePt);
         check!("testfiles/cfour/ZMAT.want", "/tmp/ZMAT");
+    }
+
+    #[test]
+    fn write_charged_input() {
+        let template = Template::from(
+            "comment line
+{{.geom}}
+
+*CFOUR(CALC=CCSD,BASIS=PVTZ,MEMORY_SIZE=8,MEM_UNIT=GB,REF=RHF,MULT=1
+{{.charge}}
+{{.keywords}})
+",
+        );
+
+        let mut d = Cfour {
+            filename: "/tmp".into(),
+            template,
+            charge: 0,
+            geom: Geom::from_str(
+                "
+O        -0.000000000         0.000000000         0.065806577
+H         0.000000000        -0.753160027        -0.522199064
+H         0.000000000         0.753160027        -0.522199064
+",
+            )
+            .unwrap(),
+        };
+
+        d.write_input(Procedure::SinglePt);
+        check!("testfiles/cfour/charged.want", "/tmp/ZMAT");
     }
 }
