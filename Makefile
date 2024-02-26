@@ -23,3 +23,8 @@ profile.read_out:
 
 profile.write_in:
 	$(call profile,write_in)
+
+cover:
+	cargo tarpaulin --out html --skip-clean --color never \
+	--exclude-files src/bin/* \
+	-- --test-threads=1
