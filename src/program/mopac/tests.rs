@@ -1,7 +1,6 @@
 use std::collections::HashSet;
-use std::fs::{self, read_to_string};
+use std::fs;
 
-use crate::program::Procedure;
 use crate::string;
 
 use crate::queue::{self, Queue, SubQueue, Submit};

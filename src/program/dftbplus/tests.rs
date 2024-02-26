@@ -1,12 +1,8 @@
-use std::fs::read_to_string;
 use std::str::FromStr;
-
-use symm::Atom;
 
 use super::*;
 
 use crate::check;
-use crate::program::ProgramResult;
 
 #[test]
 fn write_input() {

@@ -309,8 +309,6 @@ impl Queue<Cfour> for Local {
 mod tests {
     use std::str::FromStr;
 
-    use symm::Atom;
-
     use crate::check;
 
     use super::*;

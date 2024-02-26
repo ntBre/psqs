@@ -134,7 +134,7 @@ pub(crate) mod write_input {
 }
 
 mod read_output {
-    use crate::program::{Program, ProgramResult};
+    use crate::program::ProgramResult;
     use symm::Atom;
 
     use super::*;

@@ -3,7 +3,6 @@ use std::{
     borrow::BorrowMut,
     collections::{HashMap, HashSet},
     iter::{Enumerate, Fuse, Peekable},
-    marker::{Send, Sync},
     slice::ChunksMut,
     sync::LazyLock,
     thread,
