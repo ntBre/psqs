@@ -284,8 +284,24 @@ impl Queue<Cfour> for Local {
         todo!()
     }
 
-    fn write_submit_script(&self, _infiles: &[String], _filename: &str) {
-        todo!()
+    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+        use std::fmt::Write;
+        let path = Path::new(filename);
+        let basename = path.file_name().unwrap();
+        let mut body = self
+            .template
+            .clone()
+            .unwrap_or_else(|| {
+                <Self as Queue<Cfour>>::default_submit_script(self)
+            })
+            .replace("{{.basename}}", basename.to_str().unwrap())
+            .replace("{{.filename}}", filename);
+        for f in infiles {
+            writeln!(body, "(cd {f} && $CFOUR_SCRIPT $NCPUS)").unwrap();
+        }
+        if std::fs::write(filename, body).is_err() {
+            panic!("write_submit_script: failed to create {filename}");
+        };
     }
 }
 

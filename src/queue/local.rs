@@ -16,6 +16,7 @@ pub struct Local {
     pub dir: String,
     pub chunk_size: usize,
     pub mopac: String,
+    pub template: Option<String>,
 }
 
 impl Default for Local {
@@ -24,6 +25,7 @@ impl Default for Local {
             dir: ".".to_string(),
             chunk_size: 128,
             mopac: "/opt/mopac/mopac".to_owned(),
+            template: None,
         }
     }
 }
@@ -35,12 +37,13 @@ impl Local {
         _sleep_int: usize,
         dir: &'static str,
         _no_del: bool,
-        _template: Option<String>,
+        template: Option<String>,
     ) -> Self {
         Self {
             dir: dir.to_string(),
             chunk_size,
             mopac: "/opt/mopac/mopac".to_string(),
+            template,
         }
     }
 }
