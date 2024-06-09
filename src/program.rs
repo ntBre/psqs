@@ -26,6 +26,7 @@ pub enum ProgramError {
     EnergyNotFound(String),
     EnergyParseError(String),
     GeomNotFound(String),
+    ReadFileError(String, std::io::ErrorKind),
 }
 
 impl ProgramError {
