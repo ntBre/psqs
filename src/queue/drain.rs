@@ -116,6 +116,8 @@ pub(crate) trait Drain {
         let mut resub = Resub::new(queue, dir, self.procedure());
         let mut failed_jobs = 0;
         let mut iter = 0;
+        const MAX_RETRIES: usize = 5;
+        let mut retries = HashMap::new();
         loop {
             let loop_time = std::time::Instant::now();
             if chunks.peek().is_none() {
@@ -179,35 +181,49 @@ pub(crate) trait Drain {
                             eprintln!("warning: job failed with `{e}`");
                             failed_jobs += 1;
                         } else if !qstat.contains(&job.job_id) {
-                            // just overwrite the existing job with
-                            // the resubmitted version
-                            let time = job.modtime();
-                            if time > job.modtime {
-                                // file has been updated since we last looked at
-                                // it, so need to look again
-                                job.modtime = time;
-                            } else {
-                                // actual resubmission path
-                                eprintln!(
-                                    "resubmitting {} (id={}) for {:?}",
-                                    job.program.filename(),
-                                    job.job_id,
-                                    e
-                                );
-                                if *NO_RESUB {
+                            // to avoid temporary file system issues, check a
+                            // few times before resubmitting. this should avoid
+                            // the case I've been seeing where I end up with 70+
+                            // .out_## files in Molpro. the jobs are obviously
+                            // running and finishing, but the output files
+                            // aren't appearing until after I've already
+                            // resubmitted
+                            let retry = retries
+                                .entry(job.program.filename())
+                                .or_insert(MAX_RETRIES);
+                            if *retry == 0 {
+                                // just overwrite the existing job with
+                                // the resubmitted version
+                                let time = job.modtime();
+                                if time > job.modtime {
+                                    // file has been updated since we last
+                                    // looked at it, so need to look again
+                                    job.modtime = time;
+                                } else {
+                                    // actual resubmission path
                                     eprintln!(
-                                        "resubmission disabled by \
+                                        "resubmitting {} (id={}) for {:?}",
+                                        job.program.filename(),
+                                        job.job_id,
+                                        e
+                                    );
+                                    if *NO_RESUB {
+                                        eprintln!(
+                                            "resubmission disabled by \
 					 NO_RESUB environment \
 					 variable, exiting"
-                                    );
-                                    std::process::exit(1);
+                                        );
+                                        std::process::exit(1);
+                                    }
+                                    // copy the job into resub and plan to
+                                    // remove it from cur_jobs
+                                    resub.push(job.clone());
+                                    to_remove.push(i);
                                 }
-                                // copy the job into resub and plan to remove it
-                                // from cur_jobs
-                                resub.push(job.clone());
-                                to_remove.push(i);
+                            } else {
+                                *retry -= 1;
                             }
-                        };
+                        }
                     }
                 }
             }
