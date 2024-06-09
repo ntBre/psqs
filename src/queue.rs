@@ -118,12 +118,9 @@ where
         {
             let ext = path.extension().unwrap().to_str().unwrap();
             let inp_file = format!("{dir}/{base}_redo.{ext}");
-            match std::fs::copy(filename, &inp_file) {
-                Ok(_) => (),
-                Err(e) => {
-                    panic!("failed to copy {filename} to {inp_file} with `{e}`")
-                }
-            };
+            if let Err(e) = std::fs::copy(filename, &inp_file) {
+                panic!("failed to copy {filename} to {inp_file} with `{e}`")
+            }
         }
         // nothing but the copy needs the name with extension
         let inp_name = format!("{dir}/{base}_redo");
