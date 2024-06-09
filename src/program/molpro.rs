@@ -164,10 +164,13 @@ impl Program for Molpro {
 
     fn read_output(filename: &str) -> Result<ProgramResult, ProgramError> {
         let outfile = format!("{}.out", &filename);
+        if !std::path::Path::new(&outfile).exists() {
+            return Err(ProgramError::FileNotFound(outfile));
+        }
         let contents = match read_to_string(&outfile) {
             Ok(s) => s,
-            Err(_) => {
-                return Err(ProgramError::FileNotFound(outfile));
+            Err(e) => {
+                return Err(ProgramError::ReadFileError(outfile, e.kind()));
             }
         };
 
