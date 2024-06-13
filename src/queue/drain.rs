@@ -10,7 +10,7 @@ use std::{
 
 use crate::{
     geom::Geom,
-    program::{Job, Procedure, Program, ProgramError, ProgramResult},
+    program::{Job, Procedure, Program, ProgramResult},
     queue::drain::{dump::Dump, resub::ResubOutput},
 };
 
@@ -54,7 +54,8 @@ pub(crate) trait Drain {
         res: ProgramResult,
     );
 
-    /// on success, return the total job time, as returned by `P::read_output`
+    /// on success, return the total job time, as returned by `P::read_output`.
+    /// on failure, return a vector of failed job indices
     fn drain<P, Q>(
         &self,
         dir: &str,
@@ -62,7 +63,7 @@ pub(crate) trait Drain {
         mut jobs: Vec<Job<P>>,
         dst: &mut [Self::Item],
         check: Check,
-    ) -> Result<f64, ProgramError>
+    ) -> Result<f64, Vec<usize>>
     where
         Self: Sync,
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
@@ -114,7 +115,7 @@ pub(crate) trait Drain {
         let mut last_chunk = None;
         let mut to_remove = Vec::new();
         let mut resub = Resub::new(queue, dir, self.procedure());
-        let mut failed_jobs = 0;
+        let mut failed_jobs = HashSet::new();
         let mut iter = 0;
         const MAX_RETRIES: usize = 5;
         let mut retries = HashMap::new();
@@ -179,7 +180,7 @@ pub(crate) trait Drain {
                     Err(e) => {
                         if e.is_error_in_output() {
                             eprintln!("warning: job failed with `{e}`");
-                            failed_jobs += 1;
+                            failed_jobs.insert(job.program.filename());
                         } else if !qstat.contains(&job.job_id) {
                             // to avoid temporary file system issues, check a
                             // few times before resubmitting. this should avoid
@@ -260,9 +261,11 @@ pub(crate) trait Drain {
                     loop_time.elapsed().as_millis() as f64 / 1000.0
                 );
             }
-            if cur_jobs.is_empty() && out_of_jobs {
+            if cur_jobs.len().saturating_sub(failed_jobs.len()) == 0
+                && out_of_jobs
+            {
                 dump.shutdown();
-                if failed_jobs > 0 {
+                if !failed_jobs.is_empty() {
                     if let Check::Some { check_dir, .. } = &check {
                         Self::do_checkpoint(
                             &cur_jobs,
@@ -273,9 +276,9 @@ pub(crate) trait Drain {
                             dst,
                         );
                     }
-                    return Err(ProgramError::ErrorInOutput(format!(
-                        "{failed_jobs} jobs failed"
-                    )));
+                    let failed_indices: Vec<_> =
+                        cur_jobs.into_iter().map(|job| job.index).collect();
+                    return Err(failed_indices);
                 }
                 eprintln!("{time}");
                 return Ok(job_time);
