@@ -152,6 +152,10 @@ pub(crate) trait Drain {
             {
                 match res {
                     Ok(res) => {
+                        let name = job.program.filename();
+                        if failed_jobs.remove(&name) {
+                            log::info!("removed {name} from failed_jobs");
+                        }
                         to_remove.push(i);
                         job_time += res.time;
                         self.set_result(dst, job, res);
@@ -179,7 +183,7 @@ pub(crate) trait Drain {
                     }
                     Err(e) => {
                         if e.is_error_in_output() {
-                            eprintln!("warning: job failed with `{e}`");
+                            log::warn!("job failed with `{e}`");
                             failed_jobs.insert(job.program.filename());
                         } else if !qstat.contains(&job.job_id) {
                             // to avoid temporary file system issues, check a
