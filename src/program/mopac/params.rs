@@ -1,13 +1,12 @@
 use std::{fmt::Display, str::FromStr};
 
-use nalgebra as na;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Params {
     pub names: Vec<String>,
     pub atoms: Vec<String>,
-    pub values: na::DVector<f64>,
+    pub values: Vec<f64>,
 }
 
 impl Default for Params {
@@ -15,7 +14,7 @@ impl Default for Params {
         Self {
             names: Default::default(),
             atoms: Default::default(),
-            values: na::DVector::from(vec![0.; 0]),
+            values: vec![0.; 0],
         }
     }
 }
@@ -38,7 +37,7 @@ impl FromStr for Params {
         Ok(Self {
             names,
             atoms,
-            values: na::DVector::from(values),
+            values,
         })
     }
 }
@@ -143,7 +142,7 @@ impl Params {
     pub fn new(
         names: Vec<String>,
         atoms: Vec<String>,
-        values: na::DVector<f64>,
+        values: Vec<f64>,
     ) -> Self {
         Self {
             names,
@@ -159,7 +158,7 @@ impl Params {
         Self {
             names,
             atoms,
-            values: na::DVector::from(values),
+            values,
         }
     }
 
@@ -171,7 +170,7 @@ impl Params {
         Self {
             names: names.iter().map(|s| s.to_string()).collect(),
             atoms: atoms.iter().map(|s| s.to_string()).collect(),
-            values: na::DVector::from(values),
+            values,
         }
     }
 
