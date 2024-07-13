@@ -202,6 +202,7 @@ pub(crate) fn zmat_to_xyz(s: &str) -> Vec<Atom> {
         }
         sp.clear();
     }
+    atoms.retain(|atom| atom.atomic_number != 0);
     atoms
 }
 
