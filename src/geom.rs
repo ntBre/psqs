@@ -181,15 +181,7 @@ pub(crate) fn zmat_to_xyz(s: &str) -> Vec<Atom> {
                         && tors_index != bond_index
                         && tors_index != angl_index
                 );
-                let bond_atom = atoms[bond_index];
-                match bond_index {
-                    0 => assert_eq!(angl_index, 1),
-                    1 => assert_eq!(angl_index, 0),
-                    b => {
-                        panic!("invalid bond index {b} for atom 3 in Z-matrix")
-                    }
-                }
-                let origin = bond_atom;
+                let origin = atoms[bond_index];
                 let r = get_parameter(&params, sp[2]);
                 let t = get_parameter(&params, sp[4]).to_radians();
                 let p = get_parameter(&params, sp[6]).to_radians() - FRAC_PI_2;
