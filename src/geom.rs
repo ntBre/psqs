@@ -139,9 +139,9 @@ pub(crate) fn zmat_to_xyz(s: &str) -> Vec<Atom> {
                 atoms.push(Atom::new_from_label(sp[0], 0.0, 0.0, 0.0))
             }
             3 => {
-                // second atom along x axis
-                let x = get_parameter(&params, sp[2]);
-                atoms.push(Atom::new_from_label(sp[0], x, 0.0, 0.0));
+                // second atom along z axis
+                let z = get_parameter(&params, sp[2]);
+                atoms.push(Atom::new_from_label(sp[0], 0.0, 0.0, z));
             }
             5 => {
                 // third atom - use a 2D rotation matrix
