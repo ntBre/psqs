@@ -37,24 +37,33 @@ water geometry
 #[test]
 fn test_zmat_to_xyz() {
     let tests = [
-        //
+        // basic linear water
         (
             "H\nO 1 OH\nH 2 OH 1 HOH\n\nOH = 1.0\nHOH = 180.0",
             vec![
                 Atom::new(1, 0.0, 0.0, 0.0),
-                Atom::new(8, 1.0, 0.0, 0.0),
-                Atom::new(1, -1.0, 0.0, 0.0),
+                Atom::new(8, 0.0, 0.0, 1.0),
+                Atom::new(1, 0.0, 0.0, 2.0),
             ],
         ),
+        // more realistic water
+        (
+            "H\nO 1 OH\nH 2 OH 1 HOH\n\nOH = 1.0\nHOH = 109.5",
+            vec![
+                Atom::new(1, 0.0, 0.0, 0.0),
+                Atom::new(8, 0.0, 0.0, 1.0),
+                Atom::new(1, 0.0, 0.942641491, 1.333806859),
+            ],
+        ),
+        // formaldehyde, tests all four atoms
         (
             "O\nC 1 CO\nH 2 CH 1 OCH\nH 2 CH 1 OCH 3 D\n\n\
             CO = 1.2\nCH = 1.0\nOCH = 109.5\nD = 180.0",
             vec![
-                Atom::new(8, 0.0, 0.0, 0.0),
-                Atom::new(6, 1.2, 0.0, 0.0),
-                // TODO
-                Atom::new(1, 0.0, 0.0, 0.0),
-                Atom::new(1, 0.0, 0.0, 0.0),
+                Atom::new(8, 0.000000000, 0.000000000, 0.000000000),
+                Atom::new(6, 0.000000000, 0.000000000, 1.200000000),
+                Atom::new(1, 0.000000000, 0.942641491, 1.533806859),
+                Atom::new(1, 0.000000000, -0.942641491, 1.533806859),
             ],
         ),
     ];

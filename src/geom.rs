@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Display, str::FromStr};
+use std::{
+    collections::HashMap, f64::consts::FRAC_PI_2, fmt::Display, str::FromStr,
+};
 use symm::atom::Atom;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -141,50 +143,65 @@ pub(crate) fn zmat_to_xyz(s: &str) -> Vec<Atom> {
             3 => {
                 // second atom along z axis
                 let z = get_parameter(&params, sp[2]);
+                assert_eq!(sp[1], "1", "second atom must be bonded to first");
                 atoms.push(Atom::new_from_label(sp[0], 0.0, 0.0, z));
             }
             5 => {
-                // third atom - use a 2D rotation matrix
-                // https://stackoverflow.com/a/11774765:
-                // (x cos θ + y sin θ, -x sin θ + y cos θ), but we know y is
-                // zero, giving (x cos θ, -x sin θ). the answer also states that
-                // this will give the magnitude in terms of the known vector, so
-                // we need to divide by its magnitude and multiply by the new
-                // magnitude. again, the magnitude is x, so the answer becomes
-                // (r cos θ, -r sin θ), where r is the new parameter's magnitude
+                let bond_index = sp[1].parse::<usize>().unwrap() - 1;
+                let angl_index = sp[3].parse::<usize>().unwrap() - 1;
+                let bond_atom = atoms[bond_index];
+                match bond_index {
+                    0 => assert_eq!(angl_index, 1),
+                    1 => assert_eq!(angl_index, 0),
+                    b => {
+                        panic!("invalid bond index {b} for atom 3 in Z-matrix")
+                    }
+                }
+                let origin = bond_atom;
                 let r = get_parameter(&params, sp[2]);
                 let t = get_parameter(&params, sp[4]).to_radians();
+                // factor of -pi/2 to match molpro
+                let p: f64 = -std::f64::consts::FRAC_PI_2;
+                let x = r * t.sin() * p.cos();
+                let y = r * t.sin() * p.sin();
+                let z = r * t.cos();
                 atoms.push(Atom::new_from_label(
                     sp[0],
-                    r * t.cos(),
-                    -r * t.sin(),
-                    0.0,
+                    origin.x - x,
+                    origin.y - y,
+                    origin.z - z,
                 ));
             }
             7 => {
-                // let r = get_parameter(&params, sp[2]);
-                // let t = get_parameter(&params, sp[4]).to_radians();
-                // let p = get_parameter(&params, sp[6]).to_radians();
-
-                // this is the atom we're bound to (central atom in angle)
-                let b = atoms[parse_or_die::<usize>(sp[1]) - 1];
-                // and the atom to make an angle with
-                let a = atoms[parse_or_die::<usize>(sp[3]) - 1];
-                // this time we actually have to look up the atom it makes an
-                // angle with and handle a rotation in 3D. this one is also not
-                // necessarily about the origin. we will also need the central
-                // atom because the vectors are relative to that, not the
-                // origin. otherwise an angle with atom 1 (0,0,0) wouldn't make
-                // much sense
-                use nalgebra as na;
-                let b = na::vector![b.x, b.y, b.z];
-                let a = na::vector![a.x, a.y, a.z];
-
-                // see
-                // en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
-                let ba = a - b;
-                let e_ba = ba / ba.magnitude();
-                todo!()
+                let bond_index = parse_or_die::<usize>(sp[1]) - 1;
+                let angl_index = parse_or_die::<usize>(sp[3]) - 1;
+                let tors_index = parse_or_die::<usize>(sp[5]) - 1;
+                assert!(
+                    tors_index < atoms.len()
+                        && tors_index != bond_index
+                        && tors_index != angl_index
+                );
+                let bond_atom = atoms[bond_index];
+                match bond_index {
+                    0 => assert_eq!(angl_index, 1),
+                    1 => assert_eq!(angl_index, 0),
+                    b => {
+                        panic!("invalid bond index {b} for atom 3 in Z-matrix")
+                    }
+                }
+                let origin = bond_atom;
+                let r = get_parameter(&params, sp[2]);
+                let t = get_parameter(&params, sp[4]).to_radians();
+                let p = get_parameter(&params, sp[6]).to_radians() - FRAC_PI_2;
+                let x = r * t.sin() * p.cos();
+                let y = r * t.sin() * p.sin();
+                let z = r * t.cos();
+                atoms.push(Atom::new_from_label(
+                    sp[0],
+                    origin.x - x,
+                    origin.y - y,
+                    origin.z - z,
+                ));
             }
             _ => {
                 eprintln!("malformed Z-matrix entry: {atom}");
