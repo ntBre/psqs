@@ -147,8 +147,8 @@ pub(crate) fn zmat_to_xyz(s: &str) -> Vec<Atom> {
                 atoms.push(Atom::new_from_label(sp[0], 0.0, 0.0, z));
             }
             5 => {
-                let bond_index = sp[1].parse::<usize>().unwrap() - 1;
-                let angl_index = sp[3].parse::<usize>().unwrap() - 1;
+                let bond_index = parse_or_die::<usize>(sp[1]) - 1;
+                let angl_index = parse_or_die::<usize>(sp[3]) - 1;
                 let bond_atom = atoms[bond_index];
                 match bond_index {
                     0 => assert_eq!(angl_index, 1),
