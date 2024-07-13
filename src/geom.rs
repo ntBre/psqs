@@ -213,8 +213,9 @@ fn parse_or_die<T: FromStr>(s: &str) -> T {
 }
 
 fn get_parameter(params: &HashMap<&str, &str>, s: &str) -> f64 {
-    let Some(x) = params.get(s) else {
-        die!("unrecognized parameter `{s}` in Z-matrix");
+    let x = match params.get(s) {
+        Some(x) => x,
+        None => s,
     };
     let Ok(x) = x.parse::<f64>() else {
         die!("failed to parse {x} as a float in Z-matrix");
