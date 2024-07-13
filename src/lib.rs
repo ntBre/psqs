@@ -1,4 +1,4 @@
-#![feature(test, iter_collect_into, lazy_cell)]
+#![feature(test, iter_collect_into)]
 
 pub mod geom;
 pub mod program;
