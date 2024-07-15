@@ -183,8 +183,11 @@ pub(crate) trait Drain {
                     }
                     Err(e) => {
                         if e.is_error_in_output() {
-                            log::warn!("job failed with `{e}`");
-                            failed_jobs.insert(job.program.filename());
+                            let filename = job.program.filename();
+                            if !failed_jobs.contains(&filename) {
+                                log::warn!("job failed with `{e}`");
+                                failed_jobs.insert(filename);
+                            }
                         } else if !qstat.contains(&job.job_id) {
                             // to avoid temporary file system issues, check a
                             // few times before resubmitting. this should avoid
