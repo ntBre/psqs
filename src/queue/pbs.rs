@@ -119,7 +119,11 @@ where
 {
     /// An example of `self.template` should look like
     ///
-    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+    fn write_submit_script(
+        &self,
+        infiles: impl IntoIterator<Item = String>,
+        filename: &str,
+    ) {
         let path = Path::new(filename);
         let basename = path.file_name().unwrap();
         let mut body = self
@@ -132,7 +136,7 @@ where
         {
             use std::fmt::Write;
             for f in infiles {
-                let basename = Path::new(f).file_name().unwrap();
+                let basename = Path::new(&f).file_name().unwrap();
                 writeln!(
                     body,
                     "molpro -t $NCPUS --no-xml-output {basename:?}.inp"
@@ -178,7 +182,11 @@ mkdir -p $TMPDIR
 impl Queue<Mopac> for Pbs {
     /// An example of `self.template` should look like
     ///
-    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+    fn write_submit_script(
+        &self,
+        infiles: impl IntoIterator<Item = String>,
+        filename: &str,
+    ) {
         let path = Path::new(filename);
         let basename = path.file_name().unwrap();
         let mut body = self
@@ -249,7 +257,11 @@ export DFTB_PATH=/ddn/home1/r2518/.conda/envs/dftb/bin/dftb+
         .to_owned()
     }
 
-    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+    fn write_submit_script(
+        &self,
+        infiles: impl IntoIterator<Item = String>,
+        filename: &str,
+    ) {
         use std::fmt::Write;
         let path = Path::new(filename);
         let basename = path.file_name().unwrap();

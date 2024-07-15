@@ -106,7 +106,11 @@ where
 {
     fn default_submit_script(&self) -> String;
 
-    fn write_submit_script(&self, infiles: &[String], filename: &str);
+    fn write_submit_script(
+        &self,
+        infiles: impl IntoIterator<Item = String>,
+        filename: &str,
+    );
 
     /// take a name of a Program input file with the extension attached, replace
     /// the extension (ext) with _redo.ext and write _redo.SCRIPT_EXT, then
@@ -125,7 +129,7 @@ where
         // nothing but the copy needs the name with extension
         let inp_name = format!("{dir}/{base}_redo");
         let pbs_file = format!("{}/{}_redo.{}", dir, base, Self::SCRIPT_EXT);
-        self.write_submit_script(&[inp_name.clone()], &pbs_file);
+        self.write_submit_script([inp_name.clone()], &pbs_file);
         let job_id = self.submit(&pbs_file);
         Resubmit {
             inp_file: inp_name,
@@ -162,21 +166,18 @@ where
         let queue_file =
             format!("{}/{base}{}.{}", dir, chunk_num, Self::SCRIPT_EXT);
         let jl = jobs.len();
-        let mut filenames = Vec::with_capacity(jobs.len());
         let mut slurm_jobs = HashMap::new();
-        jobs.iter_mut()
-            .map(|job| {
-                time!(e, {
-                    job.program.write_input(proc);
-                });
-                input += e;
-                job.pbs_file = queue_file.to_string();
-                job.program.filename()
-            })
-            .collect_into(&mut filenames);
+        let filenames = jobs.iter_mut().map(|job| {
+            time!(e, {
+                job.program.write_input(proc);
+            });
+            input += e;
+            job.pbs_file = queue_file.to_string();
+            job.program.filename()
+        });
         slurm_jobs.insert(queue_file.clone(), jl);
         time!(e, {
-            self.write_submit_script(&filenames, &queue_file);
+            self.write_submit_script(filenames, &queue_file);
         });
         script += e;
         // run jobs

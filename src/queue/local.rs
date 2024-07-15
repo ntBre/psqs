@@ -55,7 +55,11 @@ impl Queue<Molpro> for Local {
         todo!()
     }
 
-    fn write_submit_script(&self, _infiles: &[String], _filename: &str) {
+    fn write_submit_script(
+        &self,
+        _infiles: impl IntoIterator<Item = String>,
+        _filename: &str,
+    ) {
         todo!()
     }
 }
@@ -63,7 +67,11 @@ impl Queue<Molpro> for Local {
 impl Submit<Mopac> for Local {}
 
 impl Queue<Mopac> for Local {
-    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+    fn write_submit_script(
+        &self,
+        infiles: impl IntoIterator<Item = String>,
+        filename: &str,
+    ) {
         use std::fmt::Write;
         let mut body = String::from("export LD_LIBRARY_PATH=/opt/mopac/\n");
         for f in infiles {
@@ -91,7 +99,11 @@ impl Queue<DFTBPlus> for Local {
         todo!()
     }
 
-    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+    fn write_submit_script(
+        &self,
+        infiles: impl IntoIterator<Item = String>,
+        filename: &str,
+    ) {
         use std::fmt::Write;
         let mut body = String::new();
         // assume f is a directory name, not a real file

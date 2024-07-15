@@ -49,7 +49,11 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> Submit<P>
 }
 
 impl Queue<Molpro> for Slurm {
-    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+    fn write_submit_script(
+        &self,
+        infiles: impl IntoIterator<Item = String>,
+        filename: &str,
+    ) {
         let mut body = self
             .template
             .clone()
@@ -86,7 +90,11 @@ impl Queue<Molpro> for Slurm {
 }
 
 impl Queue<Mopac> for Slurm {
-    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+    fn write_submit_script(
+        &self,
+        infiles: impl IntoIterator<Item = String>,
+        filename: &str,
+    ) {
         let mut body = self
             .template
             .clone()
@@ -130,7 +138,11 @@ impl Queue<DFTBPlus> for Slurm {
         todo!()
     }
 
-    fn write_submit_script(&self, _infiles: &[String], _filename: &str) {
+    fn write_submit_script(
+        &self,
+        _infiles: impl IntoIterator<Item = String>,
+        _filename: &str,
+    ) {
         todo!()
     }
 }

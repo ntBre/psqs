@@ -310,9 +310,8 @@ impl Mopac {
                 state = State::Labels;
                 guard.element = true;
             } else if state == State::Labels {
-                line.split_ascii_whitespace()
-                    .map(str::to_string)
-                    .collect_into(&mut labels);
+                labels
+                    .extend(line.split_ascii_whitespace().map(str::to_string));
                 state = State::None;
             // line like HEAT_OF_FORMATION:KCAL/MOL=+0.97127947459164715838D+02
             } else if !guard.heat && heat_re.is_match(&line) {

@@ -246,7 +246,11 @@ CFOUR_SCRIPT=/ddn/home8/r2610/bin/c4ext_new.sh
         .to_owned()
     }
 
-    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+    fn write_submit_script(
+        &self,
+        infiles: impl IntoIterator<Item = String>,
+        filename: &str,
+    ) {
         use std::fmt::Write;
         let path = Path::new(filename);
         let basename = path.file_name().unwrap();
@@ -272,7 +276,11 @@ impl Queue<Cfour> for Slurm {
         todo!()
     }
 
-    fn write_submit_script(&self, _infiles: &[String], _filename: &str) {
+    fn write_submit_script(
+        &self,
+        _infiles: impl IntoIterator<Item = String>,
+        _filename: &str,
+    ) {
         todo!()
     }
 }
@@ -284,7 +292,11 @@ impl Queue<Cfour> for Local {
         todo!()
     }
 
-    fn write_submit_script(&self, infiles: &[String], filename: &str) {
+    fn write_submit_script(
+        &self,
+        infiles: impl IntoIterator<Item = String>,
+        filename: &str,
+    ) {
         use std::fmt::Write;
         let path = Path::new(filename);
         let basename = path.file_name().unwrap();
