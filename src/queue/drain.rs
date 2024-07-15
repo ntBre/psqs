@@ -223,6 +223,7 @@ pub(crate) trait Drain {
                                         );
                                         std::process::exit(1);
                                     }
+                                    failed_jobs.remove(&job.program.filename());
                                     // copy the job into resub and plan to
                                     // remove it from cur_jobs
                                     resub.push(job.clone());
