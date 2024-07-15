@@ -1,3 +1,4 @@
+use nalgebra::vector;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap, f64::consts::FRAC_PI_2, fmt::Display, str::FromStr,
@@ -181,7 +182,9 @@ pub(crate) fn zmat_to_xyz(s: &str) -> Vec<Atom> {
                         && tors_index != bond_index
                         && tors_index != angl_index
                 );
-                let origin = atoms[bond_index];
+                let b = atoms[bond_index];
+                let a = atoms[angl_index];
+                let origin = vector![b.x - a.x, b.y - a.y, b.z - a.z];
                 let r = get_parameter(&params, sp[2]);
                 let t = get_parameter(&params, sp[4]).to_radians();
                 let p = get_parameter(&params, sp[6]).to_radians() - FRAC_PI_2;
