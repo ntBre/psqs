@@ -4,6 +4,7 @@ use std::{
     sync::OnceLock,
 };
 
+use log::trace;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use symm::Atom;
@@ -195,6 +196,7 @@ impl Program for DFTBPlus {
         };
 
         let [panic_re, error_re, time_re, energy_re] = CELL.get_or_init(|| {
+            trace!("initializing dftb+ output regexes");
             [
                 Regex::new("(?i)panic").unwrap(),
                 Regex::new(r"\bERROR\b").unwrap(),
