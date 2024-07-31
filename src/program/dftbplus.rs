@@ -4,7 +4,7 @@ use std::{
     sync::OnceLock,
 };
 
-use log::trace;
+use log::{trace, warn};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use symm::Atom;
@@ -17,7 +17,7 @@ use super::{parse_energy, Program, ProgramError, ProgramResult, Template};
 mod tests;
 
 static INPUT_CELL: OnceLock<[Regex; 3]> = OnceLock::new();
-static CELL: OnceLock<[Regex; 4]> = OnceLock::new();
+static CELL: OnceLock<[Regex; 5]> = OnceLock::new();
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct DFTBPlus {
@@ -195,20 +195,26 @@ impl Program for DFTBPlus {
             }
         };
 
-        let [panic_re, error_re, time_re, energy_re] = CELL.get_or_init(|| {
-            trace!("initializing dftb+ output regexes");
-            [
-                Regex::new("(?i)panic").unwrap(),
-                Regex::new(r"\bERROR\b").unwrap(),
-                Regex::new(r"^Total\s+=\s+").unwrap(),
-                Regex::new(r"^Total Energy: ").unwrap(),
-            ]
-        });
+        let [panic_re, error_re, time_re, energy_re, geom_warn] = CELL
+            .get_or_init(|| {
+                trace!("initializing dftb+ output regexes");
+                [
+                    Regex::new("(?i)panic").unwrap(),
+                    Regex::new(r"\bERROR\b").unwrap(),
+                    Regex::new(r"^Total\s+=\s+").unwrap(),
+                    Regex::new(r"^Total Energy: ").unwrap(),
+                    Regex::new(r"Geometry did NOT converge!").unwrap(),
+                ]
+            });
 
         if panic_re.is_match(&contents) {
             panic!("panic requested in read_output");
         } else if error_re.is_match(&contents) {
             return Err(ProgramError::ErrorInOutput(outname));
+        }
+
+        if geom_warn.is_match(&contents) {
+            warn!("geometry did not converge, results may be unreliable");
         }
 
         // main output
