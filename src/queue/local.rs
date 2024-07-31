@@ -150,7 +150,10 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
 
     fn status(&self) -> HashSet<String> {
         for dir in ["opt", "pts", "freqs"] {
-            let d = std::fs::read_dir(dir).unwrap();
+            let Ok(d) = std::fs::read_dir(dir) else {
+                log::error!("{dir} not found for status");
+                continue;
+            };
             for f in d {
                 eprintln!("contents of {:?}", f.as_ref().unwrap());
                 eprintln!(
