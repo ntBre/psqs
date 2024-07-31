@@ -125,7 +125,7 @@ pub(crate) trait Drain {
                 out_of_jobs = true;
             }
             if !out_of_jobs {
-                self.receive_jobs(
+                let n = self.receive_jobs(
                     &mut chunks,
                     job_limit,
                     &mut cur_jobs,
@@ -136,6 +136,7 @@ pub(crate) trait Drain {
                     &mut qstat,
                     &mut last_chunk,
                 );
+                log::trace!("received {n} chunks of jobs");
             }
 
             // collect output
@@ -381,6 +382,7 @@ pub(crate) trait Drain {
         );
     }
 
+    /// Returns the number of chunks received
     #[allow(clippy::too_many_arguments)]
     fn receive_jobs<P, Q>(
         &self,
@@ -393,7 +395,8 @@ pub(crate) trait Drain {
         time: &mut timer::Timer,
         qstat: &mut HashSet<String>,
         last_chunk: &mut Option<usize>,
-    ) where
+    ) -> usize
+    where
         Self: Sync,
         P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
         Q: Queue<P> + ?Sized + Sync,
@@ -421,6 +424,7 @@ pub(crate) trait Drain {
                 (jobs.to_vec(), slurm_jobs, job_id, wi, ws, ss, chunk_num)
             })
             .collect();
+        let ret = works.len();
         for (jobs, sj, job_id, wi, ws, ss, cn) in works {
             slurm_jobs.extend(sj);
             time.writing_input += wi;
@@ -435,6 +439,7 @@ pub(crate) trait Drain {
                 *last_chunk = Some(cn);
             }
         }
+        ret
     }
 }
 
