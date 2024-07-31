@@ -14,7 +14,7 @@ use crate::{
     queue::drain::{dump::Dump, resub::ResubOutput},
 };
 
-use super::{Queue, DEBUG};
+use super::Queue;
 
 /// time the duration of `$body` and store the resulting Duration in `$elapsed`
 #[macro_export]
@@ -263,13 +263,11 @@ pub(crate) trait Drain {
                 qstat.insert(job_id);
                 cur_jobs.extend(jobs);
             }
-            if DEBUG {
-                eprintln!(
-                    "finished {} jobs in {:.1} s",
-                    finished,
-                    loop_time.elapsed().as_millis() as f64 / 1000.0
-                );
-            }
+            log::debug!(
+                "finished {} jobs in {:.1} s",
+                finished,
+                loop_time.elapsed().as_millis() as f64 / 1000.0
+            );
             if cur_jobs.len().saturating_sub(failed_jobs.len()) == 0
                 && out_of_jobs
             {
@@ -414,13 +412,11 @@ pub(crate) trait Drain {
                     queue.build_chunk(dir, jobs, chunk_num, self.procedure());
                 let job_id = jobs[0].job_id.clone();
                 let elapsed = now.elapsed();
-                if DEBUG {
-                    eprintln!(
-                        "submitted chunk {} after {:.1} s",
-                        chunk_num,
-                        elapsed.as_millis() as f64 / 1000.0
-                    );
-                }
+                log::debug!(
+                    "submitted chunk {} after {:.1} s",
+                    chunk_num,
+                    elapsed.as_millis() as f64 / 1000.0
+                );
                 (jobs.to_vec(), slurm_jobs, job_id, wi, ws, ss, chunk_num)
             })
             .collect();

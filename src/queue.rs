@@ -25,8 +25,6 @@ mod drain;
 
 pub use drain::Check;
 
-static DEBUG: bool = false;
-
 #[derive(PartialEq, Eq, Debug)]
 pub struct Resubmit {
     pub inp_file: String,
