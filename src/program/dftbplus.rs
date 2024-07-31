@@ -128,7 +128,31 @@ impl Program for DFTBPlus {
                 Procedure::Freq => todo!(),
                 Procedure::SinglePt => {
                     if found_opt {
-                        todo!("rewrite single point file without opt");
+                        let mut braces: Vec<char> = Vec::new();
+                        let mut in_geom = false;
+                        let mut new_body = Vec::new();
+                        for line in body.lines() {
+                            if opt.is_match(line) {
+                                in_geom = true;
+                                braces.push('{');
+                            } else if in_geom {
+                                for c in line.chars() {
+                                    if c == '{' {
+                                        braces.push(c);
+                                    } else if c == '}' {
+                                        braces.pop();
+                                    }
+                                }
+                            } else {
+                                new_body.push(line);
+                            }
+                            if in_geom && braces.is_empty() {
+                                // trailing newline to make tests easier
+                                new_body.push("");
+                                in_geom = false;
+                            }
+                        }
+                        body = new_body.join("\n");
                     }
                 }
             }
