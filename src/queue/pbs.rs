@@ -227,7 +227,7 @@ module load openpbs
 export WORKDIR=$PBS_O_WORKDIR
 cd $WORKDIR
 
-export MOPAC_PATH=/ddn/home1/r2518/Packages/mopac/build/mopac
+export MOPAC_PATH=/ddnlus/r2518/Packages/mopac/build/mopac
 "
         .to_owned()
     }
@@ -251,7 +251,7 @@ module load openpbs
 export WORKDIR=$PBS_O_WORKDIR
 cd $WORKDIR
 
-export DFTB_PATH=/ddn/home1/r2518/.conda/envs/dftb/bin/dftb+
+export DFTB_PATH=/ddnlus/r2518/.conda/envs/dftb/bin/dftb+
 "
         .to_owned()
     }
