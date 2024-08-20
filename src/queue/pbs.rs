@@ -198,9 +198,7 @@ impl Queue<Mopac> for Pbs {
             .replace("{{.basename}}", basename.to_str().unwrap())
             .replace("{{.filename}}", filename);
         for f in infiles {
-            body.push_str(&format!(
-                "/ddn/home1/r2518/Packages/mopac/build/mopac {f}.mop\n"
-            ));
+            body.push_str(&format!("$MOPAC_PATH {f}.mop\n"));
         }
         let mut file = match File::create(filename) {
             Ok(f) => f,
@@ -229,6 +227,7 @@ module load openpbs
 export WORKDIR=$PBS_O_WORKDIR
 cd $WORKDIR
 
+export MOPAC_PATH=/ddn/home1/r2518/Packages/mopac/build/mopac
 "
         .to_owned()
     }
