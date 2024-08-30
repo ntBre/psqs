@@ -352,6 +352,7 @@ impl Mopac {
         if state != State::Done {
             return Err(ProgramError::GeomNotFound(auxfile));
         }
+        assert_eq!(coords.len() / 3, labels.len());
         let ret = coords
             .chunks_exact(3)
             .zip(labels)
