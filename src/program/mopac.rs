@@ -20,9 +20,10 @@ pub mod params;
 #[cfg(test)]
 mod tests;
 
-/// Mopac holds the information needed to write a MOPAC input file. `filename`
-/// should not include an extension. `.mop` will be appended for input files,
-/// and `.out` and `.aux` will be appended for output files.
+/// Mopac holds the information needed to write a MOPAC input file.
+///
+/// `filename` should not include an extension. `.mop` will be appended for
+/// input files, and `.out` and `.aux` will be appended for output files.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Mopac {
     pub filename: String,
