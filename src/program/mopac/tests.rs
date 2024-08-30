@@ -187,6 +187,13 @@ fn test_read_output() {
     assert!(got.unwrap().cart_geom.is_some());
 }
 
+#[test]
+fn read_multi_el() {
+    let got = Mopac::read_output("testfiles/mopac/multi_atom_el")
+        .map(|pr| pr.cart_geom.unwrap().len());
+    assert_eq!(got, Ok(46));
+}
+
 /// minimal queue for testing general submission
 struct TestQueue;
 

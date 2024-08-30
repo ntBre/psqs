@@ -191,7 +191,7 @@ Comment line 2
 }
 
 static READ_OUT_CELL: OnceLock<[Regex; 2]> = OnceLock::new();
-static READ_AUX_CELL: OnceLock<[Regex; 5]> = OnceLock::new();
+static READ_AUX_CELL: OnceLock<[Regex; 6]> = OnceLock::new();
 
 impl Mopac {
     pub fn new_full(
@@ -269,12 +269,13 @@ impl Mopac {
         };
         let mut energy = None;
 
-        let [heat_re, atom_re, elt_re, charge_re, time_re] = READ_AUX_CELL
-            .get_or_init(|| {
+        let [heat_re, atom_re, elt_re, core_re, charge_re, time_re] =
+            READ_AUX_CELL.get_or_init(|| {
                 [
                     Regex::new("^ HEAT_OF_FORMATION").unwrap(),
                     Regex::new("^ ATOM_X_OPT").unwrap(),
                     Regex::new("^ ATOM_EL").unwrap(),
+                    Regex::new("^ ATOM_CORE").unwrap(),
                     Regex::new("^ ATOM_CHARGES").unwrap(),
                     Regex::new("^ CPU_TIME:SEC=").unwrap(),
                 ]
@@ -309,10 +310,11 @@ impl Mopac {
             if !guard.element && elt_re.is_match(&line) {
                 state = State::Labels;
                 guard.element = true;
+            } else if state == State::Labels && core_re.is_match(&line) {
+                state = State::None;
             } else if state == State::Labels {
                 labels
                     .extend(line.split_ascii_whitespace().map(str::to_string));
-                state = State::None;
             // line like HEAT_OF_FORMATION:KCAL/MOL=+0.97127947459164715838D+02
             } else if !guard.heat && heat_re.is_match(&line) {
                 let fields: Vec<&str> = line.trim().split('=').collect();
