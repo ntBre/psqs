@@ -62,7 +62,7 @@ impl Queue<Molpro> for Slurm {
             })
             .replace("{{.filename}}", filename);
         for f in infiles {
-            body.push_str(&format!("/home/qc/bin/molpro2020.sh 1 1 {f}.inp\n"));
+            body.push_str(&format!("$MOLPRO_CMD {f}.inp\n"));
         }
         let mut file = match File::create(filename) {
             Ok(f) => f,
@@ -84,6 +84,8 @@ impl Queue<Molpro> for Slurm {
 #SBATCH -o {{.filename}}.out
 #SBATCH --no-requeue
 #SBATCH --mem=8gb
+
+MOLPRO_CMD=\"/home/qc/bin/molpro2020.sh 1 1\"
 "
         .to_owned()
     }
