@@ -104,10 +104,7 @@ impl Program for Molpro {
                 Regex::new(r"\{\{.geom\}\}").unwrap(),
             ]
         });
-        let mut found_opt = false;
-        if opt.is_match(&body) {
-            found_opt = true;
-        }
+        let found_opt = opt.is_match(&body);
         {
             use std::fmt::Write;
             match proc {
