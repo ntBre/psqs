@@ -1,7 +1,5 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::fs::File;
-use std::io::Write;
 
 use crate::program::dftbplus::DFTBPlus;
 use crate::program::molpro::Molpro;
@@ -72,31 +70,13 @@ impl Queue<Mopac> for Local {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("{} {filename}.mop", self.mopac)
-    }
-
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        use std::fmt::Write;
-        let mut body = String::from("export LD_LIBRARY_PATH=/opt/mopac/\n");
-        for f in infiles {
-            writeln!(body, "{} {f}.mop &> {filename}.out", self.mopac).unwrap();
-            writeln!(body, "cat {f}.mop {f}.out >> {filename}.out").unwrap();
-            writeln!(body, "echo \"================\" >> {filename}.out")
-                .unwrap();
-        }
-        writeln!(body, "date +%s >> {filename}.out").unwrap();
-        let mut file = File::create(filename).unwrap_or_else(|_| {
-            panic!("failed to create submit script `{filename}`")
-        });
-        write!(file, "{body}").expect("failed to write submit script");
+        format!("$MOPAC_CMD {filename}.mop")
     }
 
     fn default_submit_script(&self) -> String {
-        "export LD_LIBRARY_PATH=/opt/mopac/\n".into()
+        "export MOPAC_CMD=/opt/mopac/mopac
+export LD_LIBRARY_PATH=/opt/mopac/\n"
+            .into()
     }
 }
 
