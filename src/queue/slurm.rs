@@ -232,15 +232,41 @@ mod tests {
         }
     }
 
-    #[test]
-    fn molpro_slurm() {
-        let tmp = tempfile::NamedTempFile::new().unwrap();
-        <Slurm as Queue<Molpro>>::write_submit_script(
-            &slurm(),
-            ["opt0.inp", "opt1.inp", "opt2.inp", "opt3.inp"].map(|s| s.into()),
-            tmp.path().to_str().unwrap(),
-        );
-        let got = std::fs::read_to_string(tmp).unwrap();
-        assert_snapshot!(got);
+    macro_rules! make_tests {
+        ($($name:ident, $queue:expr => $q:ty, $p:ty$(,)*)*) => {
+            $(
+            #[test]
+            fn $name() {
+                let tmp = tempfile::NamedTempFile::new().unwrap();
+                <$q as Queue<$p>>::write_submit_script(
+                    $queue,
+                    ["opt0.inp", "opt1.inp", "opt2.inp", "opt3.inp"].map(|s| s.into()),
+                    tmp.path().to_str().unwrap(),
+                );
+                let got = std::fs::read_to_string(tmp).unwrap();
+                let got: Vec<&str> = got.lines().filter(|l|
+                    !(l.starts_with("#SBATCH --job-name")
+                        || l.starts_with("#SBATCH -o"))).collect();
+                let got = got.join("\n");
+                assert_snapshot!(got);
+            }
+            )*
+        }
     }
+
+    make_tests! {
+        molpro_slurm, &slurm() => Slurm, Molpro,
+    }
+
+    // #[test]
+    // fn mopac_slurm() {
+    //     let tmp = tempfile::NamedTempFile::new().unwrap();
+    //     <Slurm as Queue<Mopac>>::write_submit_script(
+    //         &slurm(),
+    //         ["opt0.inp", "opt1.inp", "opt2.inp", "opt3.inp"].map(|s| s.into()),
+    //         tmp.path().to_str().unwrap(),
+    //     );
+    //     let got = std::fs::read_to_string(tmp).unwrap();
+    //     assert_snapshot!(got);
+    // }
 }

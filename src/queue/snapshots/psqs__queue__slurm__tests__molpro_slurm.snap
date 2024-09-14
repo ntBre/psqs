@@ -3,10 +3,8 @@ source: src/queue/slurm.rs
 expression: got
 ---
 #!/bin/bash
-#SBATCH --job-name=/tmp/.tmpe3JtTD
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH -o /tmp/.tmpe3JtTD.out
 #SBATCH --no-requeue
 #SBATCH --mem=8gb
 
