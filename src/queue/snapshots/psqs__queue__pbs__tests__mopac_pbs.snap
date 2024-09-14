@@ -16,6 +16,7 @@ module load openpbs
 export WORKDIR=$PBS_O_WORKDIR
 cd $WORKDIR
 
+export LD_LIBRARY_PATH=/ddnlus/r2518/Packages/mopac/build
 export MOPAC_CMD=/ddnlus/r2518/Packages/mopac/build/mopac
 $MOPAC_CMD pts/opt0.inp.mop
 $MOPAC_CMD pts/opt1.inp.mop

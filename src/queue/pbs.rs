@@ -180,6 +180,7 @@ module load openpbs
 export WORKDIR=$PBS_O_WORKDIR
 cd $WORKDIR
 
+export LD_LIBRARY_PATH=/ddnlus/r2518/Packages/mopac/build
 export MOPAC_CMD=/ddnlus/r2518/Packages/mopac/build/mopac
 "
         .to_owned()
