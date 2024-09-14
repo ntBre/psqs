@@ -351,3 +351,52 @@ where
         self.no_del
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+
+    use crate::program::cfour::Cfour;
+
+    use super::*;
+
+    fn pbs() -> Pbs {
+        Pbs {
+            chunk_size: 1,
+            job_limit: 1,
+            sleep_int: 1,
+            dir: "/tmp",
+            no_del: false,
+            template: None,
+        }
+    }
+
+    macro_rules! make_tests {
+        ($($name:ident, $queue:expr => $p:ty$(,)*)*) => {
+            $(
+            #[test]
+            fn $name() {
+                let tmp = tempfile::NamedTempFile::new().unwrap();
+                <Pbs as Queue<$p>>::write_submit_script(
+                    $queue,
+                    ["opt0.inp", "opt1.inp", "opt2.inp", "opt3.inp"].map(|s| s.into()),
+                    tmp.path().to_str().unwrap(),
+                );
+                let got = std::fs::read_to_string(tmp).unwrap();
+                let got: Vec<&str> = got.lines().filter(|l|
+                    !(l.starts_with("#PBS -N")
+                        || l.starts_with("#PBS -o"))).collect();
+                let got = got.join("\n");
+                assert_snapshot!(got);
+            }
+            )*
+        }
+    }
+
+    make_tests! {
+        mopac_pbs, &pbs() =>  Mopac,
+        molpro_pbs, &pbs() =>  Molpro,
+        cfour_pbs, &pbs() => Cfour,
+        dftb_pbs, &pbs() => DFTBPlus,
+    }
+}

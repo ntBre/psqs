@@ -1,0 +1,23 @@
+---
+source: src/queue/pbs.rs
+expression: got
+---
+#!/bin/sh
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -W umask=022
+#PBS -l walltime=1000:00:00
+#PBS -l ncpus=1
+#PBS -l mem=8gb
+#PBS -q workq
+
+module load openpbs
+
+export WORKDIR=$PBS_O_WORKDIR
+cd $WORKDIR
+
+CFOUR_SCRIPT=/ddn/home8/r2610/bin/c4ext_new.sh
+(cd opt0.inp && $CFOUR_SCRIPT $NCPUS)
+(cd opt1.inp && $CFOUR_SCRIPT $NCPUS)
+(cd opt2.inp && $CFOUR_SCRIPT $NCPUS)
+(cd opt3.inp && $CFOUR_SCRIPT $NCPUS)

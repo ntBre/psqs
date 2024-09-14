@@ -233,12 +233,12 @@ mod tests {
     }
 
     macro_rules! make_tests {
-        ($($name:ident, $queue:expr => $q:ty, $p:ty$(,)*)*) => {
+        ($($name:ident, $queue:expr => $p:ty$(,)*)*) => {
             $(
             #[test]
             fn $name() {
                 let tmp = tempfile::NamedTempFile::new().unwrap();
-                <$q as Queue<$p>>::write_submit_script(
+                <Slurm as Queue<$p>>::write_submit_script(
                     $queue,
                     ["opt0.inp", "opt1.inp", "opt2.inp", "opt3.inp"].map(|s| s.into()),
                     tmp.path().to_str().unwrap(),
@@ -255,8 +255,8 @@ mod tests {
     }
 
     make_tests! {
-        mopac_slurm, &slurm() => Slurm, Mopac,
-        molpro_slurm, &slurm() => Slurm, Molpro,
+        mopac_slurm, &slurm() =>  Mopac,
+        molpro_slurm, &slurm() => Molpro,
         // cfour_slurm, &slurm() => Slurm, Cfour,
         // dftb_slurm, &slurm() => Slurm, DFTBPlus,
     }
