@@ -214,3 +214,33 @@ where
         self.no_del
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+
+    use super::*;
+
+    fn slurm() -> Slurm {
+        Slurm {
+            chunk_size: 1,
+            job_limit: 1,
+            sleep_int: 1,
+            dir: "/tmp",
+            no_del: false,
+            template: None,
+        }
+    }
+
+    #[test]
+    fn molpro_slurm() {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        <Slurm as Queue<Molpro>>::write_submit_script(
+            &slurm(),
+            ["opt0.inp", "opt1.inp", "opt2.inp", "opt3.inp"].map(|s| s.into()),
+            tmp.path().to_str().unwrap(),
+        );
+        let got = std::fs::read_to_string(tmp).unwrap();
+        assert_snapshot!(got);
+    }
+}
