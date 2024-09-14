@@ -13,7 +13,6 @@ use super::{SubQueue, Submit};
 pub struct Local {
     pub dir: String,
     pub chunk_size: usize,
-    pub mopac: String,
     pub template: Option<String>,
 }
 
@@ -22,7 +21,6 @@ impl Default for Local {
         Self {
             dir: ".".to_string(),
             chunk_size: 128,
-            mopac: "/opt/mopac/mopac".to_owned(),
             template: None,
         }
     }
@@ -40,7 +38,6 @@ impl Local {
         Self {
             dir: dir.to_string(),
             chunk_size,
-            mopac: "/opt/mopac/mopac".to_string(),
             template,
         }
     }
@@ -160,7 +157,6 @@ mod tests {
         Local {
             dir: String::new(),
             chunk_size: 0,
-            mopac: "mopac".into(),
             template: None,
         }
     }
