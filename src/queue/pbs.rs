@@ -1,5 +1,3 @@
-use std::fs::File;
-use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
 use std::{collections::HashSet, process::Command};
@@ -210,32 +208,6 @@ cd $WORKDIR
 export DFTB_PATH=/ddnlus/r2518/.conda/envs/dftb/bin/dftb+
 "
         .to_owned()
-    }
-
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        use std::fmt::Write;
-        let path = Path::new(filename);
-        let basename = path.file_name().unwrap();
-        let mut body = self
-            .template
-            .clone()
-            .unwrap_or_else(|| {
-                <Self as Queue<DFTBPlus>>::default_submit_script(self)
-            })
-            .replace("{{.basename}}", basename.to_str().unwrap())
-            .replace("{{.filename}}", filename);
-        for f in infiles {
-            writeln!(body, "(cd {f} && $DFTB_PATH > out)").unwrap();
-        }
-        let Ok(mut file) = File::create(filename) else {
-            eprintln!("write_submit_script: failed to create {filename}");
-            std::process::exit(1);
-        };
-        write!(file, "{body}").expect("failed to write DFTB+ PBS file");
     }
 }
 
