@@ -255,18 +255,9 @@ mod tests {
     }
 
     make_tests! {
+        mopac_slurm, &slurm() => Slurm, Mopac,
         molpro_slurm, &slurm() => Slurm, Molpro,
+        // cfour_slurm, &slurm() => Slurm, Cfour,
+        // dftb_slurm, &slurm() => Slurm, DFTBPlus,
     }
-
-    // #[test]
-    // fn mopac_slurm() {
-    //     let tmp = tempfile::NamedTempFile::new().unwrap();
-    //     <Slurm as Queue<Mopac>>::write_submit_script(
-    //         &slurm(),
-    //         ["opt0.inp", "opt1.inp", "opt2.inp", "opt3.inp"].map(|s| s.into()),
-    //         tmp.path().to_str().unwrap(),
-    //     );
-    //     let got = std::fs::read_to_string(tmp).unwrap();
-    //     assert_snapshot!(got);
-    // }
 }
