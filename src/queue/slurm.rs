@@ -1,6 +1,4 @@
 use std::collections::HashSet;
-use std::fs::File;
-use std::io::Write;
 
 use serde::{Deserialize, Serialize};
 
@@ -78,34 +76,7 @@ impl Queue<Mopac> for Slurm {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("/home/qc/mopac2016/MOPAC2016.exe {filename}.mop\n")
-    }
-
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        let mut body = self
-            .template
-            .clone()
-            .unwrap_or_else(|| {
-                <Self as Queue<Mopac>>::default_submit_script(self)
-            })
-            .replace("{{.filename}}", filename);
-        for f in infiles {
-            body.push_str(&format!(
-                "/home/qc/mopac2016/MOPAC2016.exe {f}.mop\n"
-            ));
-        }
-        let mut file = match File::create(filename) {
-            Ok(f) => f,
-            Err(_) => {
-                eprintln!("write_submit_script: failed to create {filename}");
-                std::process::exit(1);
-            }
-        };
-        write!(file, "{body}").expect("failed to write params file");
+        format!("/home/qc/mopac2016/MOPAC2016.exe {filename}.mop")
     }
 
     fn default_submit_script(&self) -> String {
