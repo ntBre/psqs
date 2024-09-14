@@ -120,7 +120,7 @@ where
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("molpro -t $NCPUS --no-xml-output {filename}.inp")
+        format!("$MOLPRO_CMD {filename}.inp")
     }
 
     fn default_submit_script(&self) -> String {
@@ -142,6 +142,8 @@ export TMPDIR=/tmp/$USER/$PBS_JOBID
 cd $WORKDIR
 mkdir -p $TMPDIR
 trap 'rm -rf $TMPDIR' EXIT
+
+export MOLPRO_CMD=\"molpro -t $NCPUS --no-xml-output\"
 "
         .to_owned()
     }

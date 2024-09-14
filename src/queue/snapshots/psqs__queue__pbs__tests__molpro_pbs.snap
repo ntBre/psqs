@@ -18,7 +18,9 @@ export TMPDIR=/tmp/$USER/$PBS_JOBID
 cd $WORKDIR
 mkdir -p $TMPDIR
 trap 'rm -rf $TMPDIR' EXIT
-molpro -t $NCPUS --no-xml-output opt0.inp.inp
-molpro -t $NCPUS --no-xml-output opt1.inp.inp
-molpro -t $NCPUS --no-xml-output opt2.inp.inp
-molpro -t $NCPUS --no-xml-output opt3.inp.inp
+
+export MOLPRO_CMD="molpro -t $NCPUS --no-xml-output"
+$MOLPRO_CMD opt0.inp.inp
+$MOLPRO_CMD opt1.inp.inp
+$MOLPRO_CMD opt2.inp.inp
+$MOLPRO_CMD opt3.inp.inp
