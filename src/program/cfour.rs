@@ -229,7 +229,7 @@ impl Queue<Cfour> for Pbs {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("(cd {filename} && $CFOUR_SCRIPT $NCPUS)")
+        format!("(cd {filename} && $CFOUR_CMD)")
     }
 
     fn default_submit_script(&self) -> String {
@@ -249,7 +249,7 @@ module load openpbs
 export WORKDIR=$PBS_O_WORKDIR
 cd $WORKDIR
 
-CFOUR_SCRIPT=/ddn/home8/r2610/bin/c4ext_new.sh
+CFOUR_CMD=\"/ddn/home8/r2610/bin/c4ext_new.sh $NCPUS\"
 "
         .to_owned()
     }
@@ -261,7 +261,7 @@ impl Queue<Cfour> for Slurm {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("(cd {filename} && $CFOUR_SCRIPT $NCPUS)")
+        format!("(cd {filename} && $CFOUR_CMD)")
     }
 
     fn default_submit_script(&self) -> String {
@@ -277,11 +277,11 @@ impl Queue<Cfour> for Local {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("(cd {filename} && $CFOUR_SCRIPT $NCPUS)")
+        format!("(cd {filename} && $CFOUR_CMD)")
     }
 
     fn default_submit_script(&self) -> String {
-        "CFOUR_SCRIPT=/opt/cfour/cfour; NCPUS=4".into()
+        "CFOUR_CMD=/opt/cfour/cfour\n".into()
     }
 }
 
