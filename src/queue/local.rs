@@ -170,3 +170,49 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+
+    use crate::program::cfour::Cfour;
+
+    use super::*;
+
+    fn local() -> Local {
+        Local {
+            dir: String::new(),
+            chunk_size: 0,
+            mopac: "mopac".into(),
+            template: None,
+        }
+    }
+
+    macro_rules! make_tests {
+        ($($name:ident, $queue:expr => $p:ty$(,)*)*) => {
+            $(
+            #[test]
+            fn $name() {
+                let tmp = tempfile::NamedTempFile::new().unwrap();
+                <Local as Queue<$p>>::write_submit_script(
+                    $queue,
+                    ["opt0.inp", "opt1.inp", "opt2.inp", "opt3.inp"].map(|s| s.into()),
+                    tmp.path().to_str().unwrap(),
+                );
+                let got = std::fs::read_to_string(tmp).unwrap();
+                let got: Vec<&str> = got.lines().filter(|l|
+                    !l.contains("/tmp")).collect();
+                let got = got.join("\n");
+                assert_snapshot!(got);
+            }
+            )*
+        }
+    }
+
+    make_tests! {
+        mopac_local, &local() =>  Mopac,
+        // molpro_local, &local() =>  Molpro,
+        cfour_local, &local() => Cfour,
+        dftb_local, &local() => DFTBPlus,
+    }
+}

@@ -1,0 +1,8 @@
+---
+source: src/queue/local.rs
+expression: got
+---
+(cd opt0.inp && /opt/dftb+/dftb+ > out)
+(cd opt1.inp && /opt/dftb+/dftb+ > out)
+(cd opt2.inp && /opt/dftb+/dftb+ > out)
+(cd opt3.inp && /opt/dftb+/dftb+ > out)
