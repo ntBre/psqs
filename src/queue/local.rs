@@ -85,11 +85,11 @@ impl Queue<DFTBPlus> for Local {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("(cd {filename} && $DFTB_PATH > out)")
+        format!("(cd {filename} && $DFTB_CMD > out)")
     }
 
     fn default_submit_script(&self) -> String {
-        "DFTB_PATH=/opt/dftb+/dftb+\n".into()
+        "DFTB_CMD=/opt/dftb+/dftb+\n".into()
     }
 }
 

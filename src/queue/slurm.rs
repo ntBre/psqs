@@ -102,7 +102,7 @@ impl Queue<DFTBPlus> for Slurm {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("(cd {filename} && $DFTB_PATH > out)")
+        format!("(cd {filename} && $DFTB_CMD > out)")
     }
 
     fn default_submit_script(&self) -> String {

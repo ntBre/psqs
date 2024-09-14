@@ -187,7 +187,7 @@ impl Queue<DFTBPlus> for Pbs {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("(cd {filename} && $DFTB_PATH > out)")
+        format!("(cd {filename} && $DFTB_CMD > out)")
     }
 
     fn default_submit_script(&self) -> String {
@@ -207,7 +207,7 @@ module load openpbs
 export WORKDIR=$PBS_O_WORKDIR
 cd $WORKDIR
 
-export DFTB_PATH=/ddnlus/r2518/.conda/envs/dftb/bin/dftb+
+export DFTB_CMD=/ddnlus/r2518/.conda/envs/dftb/bin/dftb+
 "
         .to_owned()
     }
