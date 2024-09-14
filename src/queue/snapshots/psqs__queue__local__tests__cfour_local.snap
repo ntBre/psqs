@@ -1,0 +1,8 @@
+---
+source: src/queue/local.rs
+expression: got
+---
+CFOUR_SCRIPT=/opt/cfour/cfour; NCPUS=4(cd opt0.inp && $CFOUR_SCRIPT $NCPUS)
+(cd opt1.inp && $CFOUR_SCRIPT $NCPUS)
+(cd opt2.inp && $CFOUR_SCRIPT $NCPUS)
+(cd opt3.inp && $CFOUR_SCRIPT $NCPUS)

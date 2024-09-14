@@ -1,6 +1,4 @@
 use std::collections::HashSet;
-use std::fs::File;
-use std::io::Write;
 
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +18,7 @@ pub struct Slurm {
     sleep_int: usize,
     dir: &'static str,
     no_del: bool,
-    template: Option<String>,
+    pub(crate) template: Option<String>,
 }
 
 impl Slurm {
@@ -49,31 +47,12 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> Submit<P>
 }
 
 impl Queue<Molpro> for Slurm {
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        let mut body = self
-            .template
-            .clone()
-            .unwrap_or_else(|| {
-                <Self as Queue<Molpro>>::default_submit_script(self)
-            })
-            .replace("{{.filename}}", filename);
-        for f in infiles {
-            body.push_str(&format!("$MOLPRO_CMD {f}.inp\n"));
-        }
-        let mut file = match File::create(filename) {
-            Ok(f) => f,
-            Err(_) => {
-                eprintln!("write_submit_script: failed to create {filename}");
-                std::process::exit(1);
-            }
-        };
-        write!(file, "{body}").unwrap_or_else(|_| {
-            panic!("failed to write molpro input file: {filename}")
-        });
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("$MOLPRO_CMD {filename}.inp")
     }
 
     fn default_submit_script(&self) -> String {
@@ -92,31 +71,12 @@ MOLPRO_CMD=\"/home/qc/bin/molpro2020.sh 1 1\"
 }
 
 impl Queue<Mopac> for Slurm {
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        let mut body = self
-            .template
-            .clone()
-            .unwrap_or_else(|| {
-                <Self as Queue<Mopac>>::default_submit_script(self)
-            })
-            .replace("{{.filename}}", filename);
-        for f in infiles {
-            body.push_str(&format!(
-                "/home/qc/mopac2016/MOPAC2016.exe {f}.mop\n"
-            ));
-        }
-        let mut file = match File::create(filename) {
-            Ok(f) => f,
-            Err(_) => {
-                eprintln!("write_submit_script: failed to create {filename}");
-                std::process::exit(1);
-            }
-        };
-        write!(file, "{body}").expect("failed to write params file");
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("/home/qc/mopac2016/MOPAC2016.exe {filename}.mop")
     }
 
     fn default_submit_script(&self) -> String {
@@ -136,16 +96,16 @@ hostname\n"
 }
 
 impl Queue<DFTBPlus> for Slurm {
-    fn default_submit_script(&self) -> String {
-        todo!()
+    fn template(&self) -> &Option<String> {
+        &self.template
     }
 
-    fn write_submit_script(
-        &self,
-        _infiles: impl IntoIterator<Item = String>,
-        _filename: &str,
-    ) {
-        todo!()
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("(cd {filename} && $DFTB_PATH > out)")
+    }
+
+    fn default_submit_script(&self) -> String {
+        String::new()
     }
 }
 
@@ -212,5 +172,54 @@ where
 
     fn no_del(&self) -> bool {
         self.no_del
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+
+    use crate::program::cfour::Cfour;
+
+    use super::*;
+
+    fn slurm() -> Slurm {
+        Slurm {
+            chunk_size: 1,
+            job_limit: 1,
+            sleep_int: 1,
+            dir: "/tmp",
+            no_del: false,
+            template: None,
+        }
+    }
+
+    macro_rules! make_tests {
+        ($($name:ident, $queue:expr => $p:ty$(,)*)*) => {
+            $(
+            #[test]
+            fn $name() {
+                let tmp = tempfile::NamedTempFile::new().unwrap();
+                <Slurm as Queue<$p>>::write_submit_script(
+                    $queue,
+                    ["opt0.inp", "opt1.inp", "opt2.inp", "opt3.inp"].map(|s| s.into()),
+                    tmp.path().to_str().unwrap(),
+                );
+                let got = std::fs::read_to_string(tmp).unwrap();
+                let got: Vec<&str> = got.lines().filter(|l|
+                    !(l.starts_with("#SBATCH --job-name")
+                        || l.starts_with("#SBATCH -o"))).collect();
+                let got = got.join("\n");
+                assert_snapshot!(got);
+            }
+            )*
+        }
+    }
+
+    make_tests! {
+        mopac_slurm, &slurm() =>  Mopac,
+        molpro_slurm, &slurm() => Molpro,
+        cfour_slurm, &slurm() => Cfour,
+        dftb_slurm, &slurm() => DFTBPlus,
     }
 }

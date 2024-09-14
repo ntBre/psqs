@@ -1,0 +1,8 @@
+---
+source: src/queue/local.rs
+expression: got
+---
+mopac opt0.inp.mop &> opt0.inp.out
+mopac opt1.inp.mop &> opt1.inp.out
+mopac opt2.inp.mop &> opt2.inp.out
+mopac opt3.inp.mop &> opt3.inp.out

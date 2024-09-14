@@ -1,0 +1,24 @@
+---
+source: src/queue/pbs.rs
+expression: got
+---
+#!/bin/sh
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -W umask=022
+#PBS -l walltime=1000:00:00
+#PBS -l ncpus=1
+#PBS -l mem=8gb
+#PBS -q workq
+
+module load openpbs molpro
+
+export WORKDIR=$PBS_O_WORKDIR
+export TMPDIR=/tmp/$USER/$PBS_JOBID
+cd $WORKDIR
+mkdir -p $TMPDIR
+trap 'rm -rf $TMPDIR' EXIT
+molpro -t $NCPUS --no-xml-output opt0.inp.inp
+molpro -t $NCPUS --no-xml-output opt1.inp.inp
+molpro -t $NCPUS --no-xml-output opt2.inp.inp
+molpro -t $NCPUS --no-xml-output opt3.inp.inp

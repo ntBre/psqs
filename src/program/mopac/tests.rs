@@ -200,18 +200,13 @@ struct TestQueue;
 impl Submit<Mopac> for TestQueue {}
 
 impl Queue<Mopac> for TestQueue {
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        let mut body = String::new();
-        for f in infiles {
-            body.push_str(&format!("echo {f}\n"));
-        }
-        let mut file =
-            File::create(filename).expect("failed to create params file");
-        write!(file, "{body}").expect("failed to write params file");
+    fn template(&self) -> &Option<String> {
+        static S: Option<String> = Some(String::new());
+        &S
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("echo {filename}")
     }
 
     fn default_submit_script(&self) -> String {

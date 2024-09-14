@@ -1,5 +1,3 @@
-use std::fs::File;
-use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
 use std::{collections::HashSet, process::Command};
@@ -117,43 +115,12 @@ impl Queue<Molpro> for Pbs
 where
     Molpro: Serialize + for<'a> Deserialize<'a>,
 {
-    /// An example of `self.template` should look like
-    ///
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        let path = Path::new(filename);
-        let basename = path.file_name().unwrap();
-        let mut body = self
-            .template
-            .clone()
-            .unwrap_or_else(|| {
-                <Self as Queue<Molpro>>::default_submit_script(self)
-            })
-            .replace("{{.basename}}", basename.to_str().unwrap());
-        {
-            use std::fmt::Write;
-            for f in infiles {
-                let basename = Path::new(&f).file_name().unwrap();
-                writeln!(
-                    body,
-                    "molpro -t $NCPUS --no-xml-output {basename:?}.inp"
-                )
-                .unwrap();
-            }
-            writeln!(body, "rm -rf $TMPDIR").unwrap();
-        }
-        let mut file = match File::create(filename) {
-            Ok(f) => f,
-            Err(_) => {
-                panic!("write_submit_script: failed to create {filename}");
-            }
-        };
-        write!(file, "{body}").unwrap_or_else(|_| {
-            panic!("failed to write molpro input file: {filename}")
-        });
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("molpro -t $NCPUS --no-xml-output {filename}.inp")
     }
 
     fn default_submit_script(&self) -> String {
@@ -174,40 +141,19 @@ export WORKDIR=$PBS_O_WORKDIR
 export TMPDIR=/tmp/$USER/$PBS_JOBID
 cd $WORKDIR
 mkdir -p $TMPDIR
+trap 'rm -rf $TMPDIR' EXIT
 "
         .to_owned()
     }
 }
 
 impl Queue<Mopac> for Pbs {
-    /// An example of `self.template` should look like
-    ///
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        let path = Path::new(filename);
-        let basename = path.file_name().unwrap();
-        let mut body = self
-            .template
-            .clone()
-            .unwrap_or_else(|| {
-                <Self as Queue<Mopac>>::default_submit_script(self)
-            })
-            .replace("{{.basename}}", basename.to_str().unwrap())
-            .replace("{{.filename}}", filename);
-        for f in infiles {
-            body.push_str(&format!("$MOPAC_PATH {f}.mop\n"));
-        }
-        let mut file = match File::create(filename) {
-            Ok(f) => f,
-            Err(_) => {
-                eprintln!("write_submit_script: failed to create {filename}");
-                std::process::exit(1);
-            }
-        };
-        write!(file, "{body}").expect("failed to write params file");
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("$MOPAC_PATH {filename}.mop")
     }
 
     fn default_submit_script(&self) -> String {
@@ -234,6 +180,14 @@ export MOPAC_PATH=/ddnlus/r2518/Packages/mopac/build/mopac
 }
 
 impl Queue<DFTBPlus> for Pbs {
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("(cd {filename} && $DFTB_PATH > out)")
+    }
+
     fn default_submit_script(&self) -> String {
         "#!/bin/sh
 #PBS -N {{.basename}}
@@ -254,32 +208,6 @@ cd $WORKDIR
 export DFTB_PATH=/ddnlus/r2518/.conda/envs/dftb/bin/dftb+
 "
         .to_owned()
-    }
-
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        use std::fmt::Write;
-        let path = Path::new(filename);
-        let basename = path.file_name().unwrap();
-        let mut body = self
-            .template
-            .clone()
-            .unwrap_or_else(|| {
-                <Self as Queue<DFTBPlus>>::default_submit_script(self)
-            })
-            .replace("{{.basename}}", basename.to_str().unwrap())
-            .replace("{{.filename}}", filename);
-        for f in infiles {
-            writeln!(body, "(cd {f} && $DFTB_PATH > out)").unwrap();
-        }
-        let Ok(mut file) = File::create(filename) else {
-            eprintln!("write_submit_script: failed to create {filename}");
-            std::process::exit(1);
-        };
-        write!(file, "{body}").expect("failed to write DFTB+ PBS file");
     }
 }
 
@@ -349,5 +277,54 @@ where
 
     fn no_del(&self) -> bool {
         self.no_del
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+
+    use crate::program::cfour::Cfour;
+
+    use super::*;
+
+    fn pbs() -> Pbs {
+        Pbs {
+            chunk_size: 1,
+            job_limit: 1,
+            sleep_int: 1,
+            dir: "/tmp",
+            no_del: false,
+            template: None,
+        }
+    }
+
+    macro_rules! make_tests {
+        ($($name:ident, $queue:expr => $p:ty$(,)*)*) => {
+            $(
+            #[test]
+            fn $name() {
+                let tmp = tempfile::NamedTempFile::new().unwrap();
+                <Pbs as Queue<$p>>::write_submit_script(
+                    $queue,
+                    ["opt0.inp", "opt1.inp", "opt2.inp", "opt3.inp"].map(|s| s.into()),
+                    tmp.path().to_str().unwrap(),
+                );
+                let got = std::fs::read_to_string(tmp).unwrap();
+                let got: Vec<&str> = got.lines().filter(|l|
+                    !(l.starts_with("#PBS -N")
+                        || l.starts_with("#PBS -o"))).collect();
+                let got = got.join("\n");
+                assert_snapshot!(got);
+            }
+            )*
+        }
+    }
+
+    make_tests! {
+        mopac_pbs, &pbs() =>  Mopac,
+        molpro_pbs, &pbs() =>  Molpro,
+        cfour_pbs, &pbs() => Cfour,
+        dftb_pbs, &pbs() => DFTBPlus,
     }
 }

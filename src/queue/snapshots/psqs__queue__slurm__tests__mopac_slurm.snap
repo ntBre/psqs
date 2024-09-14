@@ -1,0 +1,17 @@
+---
+source: src/queue/slurm.rs
+expression: got
+---
+#!/bin/bash
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=1
+#SBATCH --no-requeue
+#SBATCH --mem=1gb
+export LD_LIBRARY_PATH=/home/qc/mopac2016/
+echo $SLURM_JOB_ID
+date
+hostname
+/home/qc/mopac2016/MOPAC2016.exe opt0.inp.mop
+/home/qc/mopac2016/MOPAC2016.exe opt1.inp.mop
+/home/qc/mopac2016/MOPAC2016.exe opt2.inp.mop
+/home/qc/mopac2016/MOPAC2016.exe opt3.inp.mop

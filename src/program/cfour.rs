@@ -224,6 +224,14 @@ impl Program for Cfour {
 impl Submit<Cfour> for Pbs {}
 
 impl Queue<Cfour> for Pbs {
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("(cd {filename} && $CFOUR_SCRIPT $NCPUS)")
+    }
+
     fn default_submit_script(&self) -> String {
         "#!/bin/sh
 #PBS -N {{.basename}}
@@ -245,75 +253,35 @@ CFOUR_SCRIPT=/ddn/home8/r2610/bin/c4ext_new.sh
 "
         .to_owned()
     }
-
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        use std::fmt::Write;
-        let path = Path::new(filename);
-        let basename = path.file_name().unwrap();
-        let mut body = self
-            .template
-            .clone()
-            .unwrap_or_else(|| {
-                <Self as Queue<Cfour>>::default_submit_script(self)
-            })
-            .replace("{{.basename}}", basename.to_str().unwrap())
-            .replace("{{.filename}}", filename);
-        for f in infiles {
-            writeln!(body, "(cd {f} && $CFOUR_SCRIPT $NCPUS)").unwrap();
-        }
-        if std::fs::write(filename, body).is_err() {
-            panic!("write_submit_script: failed to create {filename}");
-        };
-    }
 }
 
 impl Queue<Cfour> for Slurm {
-    fn default_submit_script(&self) -> String {
-        todo!()
+    fn template(&self) -> &Option<String> {
+        &self.template
     }
 
-    fn write_submit_script(
-        &self,
-        _infiles: impl IntoIterator<Item = String>,
-        _filename: &str,
-    ) {
-        todo!()
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("(cd {filename} && $CFOUR_SCRIPT $NCPUS)")
+    }
+
+    fn default_submit_script(&self) -> String {
+        String::new()
     }
 }
 
 impl Submit<Cfour> for Local {}
 
 impl Queue<Cfour> for Local {
-    fn default_submit_script(&self) -> String {
-        todo!()
+    fn template(&self) -> &Option<String> {
+        &self.template
     }
 
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        use std::fmt::Write;
-        let path = Path::new(filename);
-        let basename = path.file_name().unwrap();
-        let mut body = self
-            .template
-            .clone()
-            .unwrap_or_else(|| {
-                <Self as Queue<Cfour>>::default_submit_script(self)
-            })
-            .replace("{{.basename}}", basename.to_str().unwrap())
-            .replace("{{.filename}}", filename);
-        for f in infiles {
-            writeln!(body, "(cd {f} && $CFOUR_SCRIPT $NCPUS)").unwrap();
-        }
-        if std::fs::write(filename, body).is_err() {
-            panic!("write_submit_script: failed to create {filename}");
-        };
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("(cd {filename} && $CFOUR_SCRIPT $NCPUS)")
+    }
+
+    fn default_submit_script(&self) -> String {
+        "CFOUR_SCRIPT=/opt/cfour/cfour; NCPUS=4".into()
     }
 }
 

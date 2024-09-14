@@ -51,22 +51,30 @@ impl Local {
 impl Submit<Molpro> for Local {}
 
 impl Queue<Molpro> for Local {
-    fn default_submit_script(&self) -> String {
-        todo!()
+    fn template(&self) -> &Option<String> {
+        &self.template
     }
 
-    fn write_submit_script(
-        &self,
-        _infiles: impl IntoIterator<Item = String>,
-        _filename: &str,
-    ) {
-        todo!()
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("{} {filename}.mop &> {filename}.out", self.mopac)
+    }
+
+    fn default_submit_script(&self) -> String {
+        String::new()
     }
 }
 
 impl Submit<Mopac> for Local {}
 
 impl Queue<Mopac> for Local {
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("{} {filename}.mop", self.mopac)
+    }
+
     fn write_submit_script(
         &self,
         infiles: impl IntoIterator<Item = String>,
@@ -88,34 +96,23 @@ impl Queue<Mopac> for Local {
     }
 
     fn default_submit_script(&self) -> String {
-        todo!()
+        "export LD_LIBRARY_PATH=/opt/mopac/\n".into()
     }
 }
 
 impl Submit<DFTBPlus> for Local {}
 
 impl Queue<DFTBPlus> for Local {
-    fn default_submit_script(&self) -> String {
-        todo!()
+    fn template(&self) -> &Option<String> {
+        &self.template
     }
 
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        use std::fmt::Write;
-        let mut body = String::new();
-        // assume f is a directory name, not a real file
-        let c = std::env::var("DFTB_PATH").unwrap_or("/opt/dftb+/dftb+".into());
-        for f in infiles {
-            writeln!(body, "(cd {f} && {c} > out)").unwrap();
-        }
-        writeln!(body, "date +%s >> {filename}.out").unwrap();
-        let mut file = File::create(filename).unwrap_or_else(|_| {
-            panic!("failed to create submit script `{filename}`")
-        });
-        write!(file, "{body}").expect("failed to write submit script");
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("(cd {filename} && $DFTB_PATH > out)")
+    }
+
+    fn default_submit_script(&self) -> String {
+        "DFTB_PATH=/opt/dftb+/dftb+\n".into()
     }
 }
 
@@ -168,5 +165,51 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> SubQueue<P>
 
     fn no_del(&self) -> bool {
         false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_snapshot;
+
+    use crate::program::cfour::Cfour;
+
+    use super::*;
+
+    fn local() -> Local {
+        Local {
+            dir: String::new(),
+            chunk_size: 0,
+            mopac: "mopac".into(),
+            template: None,
+        }
+    }
+
+    macro_rules! make_tests {
+        ($($name:ident, $queue:expr => $p:ty$(,)*)*) => {
+            $(
+            #[test]
+            fn $name() {
+                let tmp = tempfile::NamedTempFile::new().unwrap();
+                <Local as Queue<$p>>::write_submit_script(
+                    $queue,
+                    ["opt0.inp", "opt1.inp", "opt2.inp", "opt3.inp"].map(|s| s.into()),
+                    tmp.path().to_str().unwrap(),
+                );
+                let got = std::fs::read_to_string(tmp).unwrap();
+                let got: Vec<&str> = got.lines().filter(|l|
+                    !l.contains("/tmp")).collect();
+                let got = got.join("\n");
+                assert_snapshot!(got);
+            }
+            )*
+        }
+    }
+
+    make_tests! {
+        mopac_local, &local() =>  Mopac,
+        molpro_local, &local() =>  Molpro,
+        cfour_local, &local() => Cfour,
+        dftb_local, &local() => DFTBPlus,
     }
 }
