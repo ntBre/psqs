@@ -120,7 +120,8 @@ where
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("$MOLPRO_CMD {filename}.inp")
+        let basename = Path::new(&filename).file_name().unwrap();
+        format!("$MOLPRO_CMD {basename:?}.inp")
     }
 
     fn default_submit_script(&self) -> String {
@@ -309,7 +310,8 @@ mod tests {
                 let tmp = tempfile::NamedTempFile::new().unwrap();
                 <Pbs as Queue<$p>>::write_submit_script(
                     $queue,
-                    ["opt0.inp", "opt1.inp", "opt2.inp", "opt3.inp"].map(|s| s.into()),
+                    ["pts/opt0.inp", "pts/opt1.inp", "pts/opt2.inp", "pts/opt3.inp"]
+                    .map(|s| s.into()),
                     tmp.path().to_str().unwrap(),
                 );
                 let got = std::fs::read_to_string(tmp).unwrap();
