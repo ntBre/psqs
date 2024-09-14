@@ -108,30 +108,11 @@ impl Queue<DFTBPlus> for Local {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("cd {filename} && $DFTB_PATH > out")
+        format!("(cd {filename} && $DFTB_PATH > out)")
     }
 
     fn default_submit_script(&self) -> String {
-        todo!()
-    }
-
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        use std::fmt::Write;
-        let mut body = String::new();
-        // assume f is a directory name, not a real file
-        let c = std::env::var("DFTB_PATH").unwrap_or("/opt/dftb+/dftb+".into());
-        for f in infiles {
-            writeln!(body, "(cd {f} && {c} > out)").unwrap();
-        }
-        writeln!(body, "date +%s >> {filename}.out").unwrap();
-        let mut file = File::create(filename).unwrap_or_else(|_| {
-            panic!("failed to create submit script `{filename}`")
-        });
-        write!(file, "{body}").expect("failed to write submit script");
+        "DFTB_PATH=/opt/dftb+/dftb+\n".into()
     }
 }
 
