@@ -95,12 +95,7 @@ where
 
 pub trait Queue<P>: SubQueue<P> + Submit<P>
 where
-    P: Program
-        + Clone
-        + Send
-        + std::marker::Sync
-        + Serialize
-        + for<'a> Deserialize<'a>,
+    P: Program + Clone + Send + Sync + Serialize + for<'a> Deserialize<'a>,
 {
     fn default_submit_script(&self) -> String;
 
@@ -244,7 +239,7 @@ where
         dst: &mut [Geom],
     ) -> Result<f64, Vec<usize>>
     where
-        Self: std::marker::Sync,
+        Self: Sync,
     {
         Opt.drain(dir, self, jobs, dst, Check::None)
     }
@@ -278,7 +273,7 @@ where
         check: Check,
     ) -> Result<f64, Vec<usize>>
     where
-        Self: std::marker::Sync,
+        Self: Sync,
     {
         Single.drain(dir, self, jobs, dst, check)
     }
@@ -290,7 +285,7 @@ where
         dst: &mut [ProgramResult],
     ) -> Result<f64, Vec<usize>>
     where
-        Self: std::marker::Sync,
+        Self: Sync,
     {
         Both.drain(dir, self, jobs, dst, Check::None)
     }
