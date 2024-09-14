@@ -60,7 +60,7 @@ impl Queue<Molpro> for Local {
     }
 
     fn default_submit_script(&self) -> String {
-        todo!()
+        String::new()
     }
 }
 
@@ -227,7 +227,7 @@ mod tests {
 
     make_tests! {
         mopac_local, &local() =>  Mopac,
-        // molpro_local, &local() =>  Molpro,
+        molpro_local, &local() =>  Molpro,
         cfour_local, &local() => Cfour,
         dftb_local, &local() => DFTBPlus,
     }
