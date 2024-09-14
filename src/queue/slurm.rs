@@ -57,33 +57,6 @@ impl Queue<Molpro> for Slurm {
         format!("$MOLPRO_CMD {filename}.inp")
     }
 
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        let mut body = self
-            .template
-            .clone()
-            .unwrap_or_else(|| {
-                <Self as Queue<Molpro>>::default_submit_script(self)
-            })
-            .replace("{{.filename}}", filename);
-        for f in infiles {
-            body.push_str(&format!("$MOLPRO_CMD {f}.inp\n"));
-        }
-        let mut file = match File::create(filename) {
-            Ok(f) => f,
-            Err(_) => {
-                eprintln!("write_submit_script: failed to create {filename}");
-                std::process::exit(1);
-            }
-        };
-        write!(file, "{body}").unwrap_or_else(|_| {
-            panic!("failed to write molpro input file: {filename}")
-        });
-    }
-
     fn default_submit_script(&self) -> String {
         "#!/bin/bash
 #SBATCH --job-name={{.filename}}
@@ -161,15 +134,7 @@ impl Queue<DFTBPlus> for Slurm {
     }
 
     fn default_submit_script(&self) -> String {
-        todo!()
-    }
-
-    fn write_submit_script(
-        &self,
-        _infiles: impl IntoIterator<Item = String>,
-        _filename: &str,
-    ) {
-        todo!()
+        String::new()
     }
 }
 
@@ -243,6 +208,8 @@ where
 mod tests {
     use insta::assert_snapshot;
 
+    use crate::program::cfour::Cfour;
+
     use super::*;
 
     fn slurm() -> Slurm {
@@ -281,7 +248,7 @@ mod tests {
     make_tests! {
         mopac_slurm, &slurm() =>  Mopac,
         molpro_slurm, &slurm() => Molpro,
-        // cfour_slurm, &slurm() => Slurm, Cfour,
-        // dftb_slurm, &slurm() => Slurm, DFTBPlus,
+        cfour_slurm, &slurm() => Cfour,
+        dftb_slurm, &slurm() => DFTBPlus,
     }
 }

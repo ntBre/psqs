@@ -1,0 +1,8 @@
+---
+source: src/queue/slurm.rs
+expression: got
+---
+(cd opt0.inp && $CFOUR_SCRIPT $NCPUS)
+(cd opt1.inp && $CFOUR_SCRIPT $NCPUS)
+(cd opt2.inp && $CFOUR_SCRIPT $NCPUS)
+(cd opt3.inp && $CFOUR_SCRIPT $NCPUS)

@@ -265,7 +265,7 @@ impl Queue<Cfour> for Slurm {
     }
 
     fn default_submit_script(&self) -> String {
-        todo!()
+        String::new()
     }
 }
 
