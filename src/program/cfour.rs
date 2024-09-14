@@ -289,7 +289,7 @@ impl Submit<Cfour> for Local {}
 
 impl Queue<Cfour> for Local {
     fn default_submit_script(&self) -> String {
-        todo!()
+        "CFOUR_SCRIPT=/opt/cfour/cfour; NCPUS=4".into()
     }
 
     fn write_submit_script(
