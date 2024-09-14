@@ -155,7 +155,7 @@ impl Queue<Mopac> for Pbs {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("$MOPAC_PATH {filename}.mop")
+        format!("$MOPAC_CMD {filename}.mop")
     }
 
     fn default_submit_script(&self) -> String {
@@ -175,7 +175,7 @@ module load openpbs
 export WORKDIR=$PBS_O_WORKDIR
 cd $WORKDIR
 
-export MOPAC_PATH=/ddnlus/r2518/Packages/mopac/build/mopac
+export MOPAC_CMD=/ddnlus/r2518/Packages/mopac/build/mopac
 "
         .to_owned()
     }

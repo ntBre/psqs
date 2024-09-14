@@ -16,8 +16,8 @@ module load openpbs
 export WORKDIR=$PBS_O_WORKDIR
 cd $WORKDIR
 
-export MOPAC_PATH=/ddnlus/r2518/Packages/mopac/build/mopac
-$MOPAC_PATH opt0.inp.mop
-$MOPAC_PATH opt1.inp.mop
-$MOPAC_PATH opt2.inp.mop
-$MOPAC_PATH opt3.inp.mop
+export MOPAC_CMD=/ddnlus/r2518/Packages/mopac/build/mopac
+$MOPAC_CMD opt0.inp.mop
+$MOPAC_CMD opt1.inp.mop
+$MOPAC_CMD opt2.inp.mop
+$MOPAC_CMD opt3.inp.mop

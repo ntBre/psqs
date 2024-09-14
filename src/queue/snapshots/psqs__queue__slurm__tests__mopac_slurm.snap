@@ -8,10 +8,11 @@ expression: got
 #SBATCH --no-requeue
 #SBATCH --mem=1gb
 export LD_LIBRARY_PATH=/home/qc/mopac2016/
+export MOPAC_CMD=/home/qc/mopac2016/MOPAC2016.exe
 echo $SLURM_JOB_ID
 date
 hostname
-/home/qc/mopac2016/MOPAC2016.exe opt0.inp.mop
-/home/qc/mopac2016/MOPAC2016.exe opt1.inp.mop
-/home/qc/mopac2016/MOPAC2016.exe opt2.inp.mop
-/home/qc/mopac2016/MOPAC2016.exe opt3.inp.mop
+$MOPAC_CMD opt0.inp.mop
+$MOPAC_CMD opt1.inp.mop
+$MOPAC_CMD opt2.inp.mop
+$MOPAC_CMD opt3.inp.mop

@@ -76,7 +76,7 @@ impl Queue<Mopac> for Slurm {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("/home/qc/mopac2016/MOPAC2016.exe {filename}.mop")
+        format!("$MOPAC_CMD {filename}.mop")
     }
 
     fn default_submit_script(&self) -> String {
@@ -88,6 +88,7 @@ impl Queue<Mopac> for Slurm {
 #SBATCH --no-requeue
 #SBATCH --mem=1gb
 export LD_LIBRARY_PATH=/home/qc/mopac2016/
+export MOPAC_CMD=/home/qc/mopac2016/MOPAC2016.exe
 echo $SLURM_JOB_ID
 date
 hostname\n"
