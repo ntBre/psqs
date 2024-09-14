@@ -155,37 +155,7 @@ impl Queue<Mopac> for Pbs {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("$MOPAC_PATH {filename}.mop\n")
-    }
-
-    /// An example of `self.template` should look like
-    ///
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        let path = Path::new(filename);
-        let basename = path.file_name().unwrap();
-        let mut body = self
-            .template
-            .clone()
-            .unwrap_or_else(|| {
-                <Self as Queue<Mopac>>::default_submit_script(self)
-            })
-            .replace("{{.basename}}", basename.to_str().unwrap())
-            .replace("{{.filename}}", filename);
-        for f in infiles {
-            body.push_str(&format!("$MOPAC_PATH {f}.mop\n"));
-        }
-        let mut file = match File::create(filename) {
-            Ok(f) => f,
-            Err(_) => {
-                eprintln!("write_submit_script: failed to create {filename}");
-                std::process::exit(1);
-            }
-        };
-        write!(file, "{body}").expect("failed to write params file");
+        format!("$MOPAC_PATH {filename}.mop")
     }
 
     fn default_submit_script(&self) -> String {
