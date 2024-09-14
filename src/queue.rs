@@ -99,11 +99,31 @@ where
 {
     fn default_submit_script(&self) -> String;
 
+    fn template(&self) -> &Option<String>;
+
+    fn program_cmd(&self, filename: &str) -> String;
+
     fn write_submit_script(
         &self,
         infiles: impl IntoIterator<Item = String>,
         filename: &str,
-    );
+    ) {
+        use std::fmt::Write;
+        let path = Path::new(filename);
+        let basename = path.file_name().unwrap();
+        let mut body = self
+            .template()
+            .clone()
+            .unwrap_or_else(|| <Self as Queue<P>>::default_submit_script(self))
+            .replace("{{.basename}}", basename.to_str().unwrap())
+            .replace("{{.filename}}", filename);
+        for f in infiles {
+            writeln!(body, "{}", self.program_cmd(&f)).unwrap();
+        }
+        if std::fs::write(filename, body).is_err() {
+            panic!("write_submit_script: failed to create {filename}");
+        };
+    }
 
     /// take a name of a Program input file with the extension attached, replace
     /// the extension (ext) with _redo.ext and write _redo.SCRIPT_EXT, then

@@ -20,7 +20,7 @@ pub struct Slurm {
     sleep_int: usize,
     dir: &'static str,
     no_del: bool,
-    template: Option<String>,
+    pub(crate) template: Option<String>,
 }
 
 impl Slurm {
@@ -49,6 +49,14 @@ impl<P: Program + Clone + Serialize + for<'a> Deserialize<'a>> Submit<P>
 }
 
 impl Queue<Molpro> for Slurm {
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("$MOLPRO_CMD {filename}.inp")
+    }
+
     fn write_submit_script(
         &self,
         infiles: impl IntoIterator<Item = String>,
@@ -92,6 +100,14 @@ MOLPRO_CMD=\"/home/qc/bin/molpro2020.sh 1 1\"
 }
 
 impl Queue<Mopac> for Slurm {
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("/home/qc/mopac2016/MOPAC2016.exe {filename}.mop\n")
+    }
+
     fn write_submit_script(
         &self,
         infiles: impl IntoIterator<Item = String>,
@@ -136,6 +152,14 @@ hostname\n"
 }
 
 impl Queue<DFTBPlus> for Slurm {
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("(cd {filename} && $DFTB_PATH > out)")
+    }
+
     fn default_submit_script(&self) -> String {
         todo!()
     }

@@ -51,15 +51,15 @@ impl Local {
 impl Submit<Molpro> for Local {}
 
 impl Queue<Molpro> for Local {
-    fn default_submit_script(&self) -> String {
-        todo!()
+    fn template(&self) -> &Option<String> {
+        &self.template
     }
 
-    fn write_submit_script(
-        &self,
-        _infiles: impl IntoIterator<Item = String>,
-        _filename: &str,
-    ) {
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("{} {filename}.mop &> {filename}.out", self.mopac)
+    }
+
+    fn default_submit_script(&self) -> String {
         todo!()
     }
 }
@@ -67,6 +67,14 @@ impl Queue<Molpro> for Local {
 impl Submit<Mopac> for Local {}
 
 impl Queue<Mopac> for Local {
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("{} {filename}.mop", self.mopac)
+    }
+
     fn write_submit_script(
         &self,
         infiles: impl IntoIterator<Item = String>,
@@ -88,13 +96,21 @@ impl Queue<Mopac> for Local {
     }
 
     fn default_submit_script(&self) -> String {
-        todo!()
+        "export LD_LIBRARY_PATH=/opt/mopac/\n".into()
     }
 }
 
 impl Submit<DFTBPlus> for Local {}
 
 impl Queue<DFTBPlus> for Local {
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("cd {filename} && $DFTB_PATH > out")
+    }
+
     fn default_submit_script(&self) -> String {
         todo!()
     }

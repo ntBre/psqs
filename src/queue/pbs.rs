@@ -117,43 +117,12 @@ impl Queue<Molpro> for Pbs
 where
     Molpro: Serialize + for<'a> Deserialize<'a>,
 {
-    /// An example of `self.template` should look like
-    ///
-    fn write_submit_script(
-        &self,
-        infiles: impl IntoIterator<Item = String>,
-        filename: &str,
-    ) {
-        let path = Path::new(filename);
-        let basename = path.file_name().unwrap();
-        let mut body = self
-            .template
-            .clone()
-            .unwrap_or_else(|| {
-                <Self as Queue<Molpro>>::default_submit_script(self)
-            })
-            .replace("{{.basename}}", basename.to_str().unwrap());
-        {
-            use std::fmt::Write;
-            for f in infiles {
-                let basename = Path::new(&f).file_name().unwrap();
-                writeln!(
-                    body,
-                    "molpro -t $NCPUS --no-xml-output {basename:?}.inp"
-                )
-                .unwrap();
-            }
-            writeln!(body, "rm -rf $TMPDIR").unwrap();
-        }
-        let mut file = match File::create(filename) {
-            Ok(f) => f,
-            Err(_) => {
-                panic!("write_submit_script: failed to create {filename}");
-            }
-        };
-        write!(file, "{body}").unwrap_or_else(|_| {
-            panic!("failed to write molpro input file: {filename}")
-        });
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("molpro -t $NCPUS --no-xml-output {filename}.inp")
     }
 
     fn default_submit_script(&self) -> String {
@@ -174,12 +143,21 @@ export WORKDIR=$PBS_O_WORKDIR
 export TMPDIR=/tmp/$USER/$PBS_JOBID
 cd $WORKDIR
 mkdir -p $TMPDIR
+trap 'rm -rf $TMPDIR' EXIT
 "
         .to_owned()
     }
 }
 
 impl Queue<Mopac> for Pbs {
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("$MOPAC_PATH {filename}.mop\n")
+    }
+
     /// An example of `self.template` should look like
     ///
     fn write_submit_script(
@@ -234,6 +212,14 @@ export MOPAC_PATH=/ddnlus/r2518/Packages/mopac/build/mopac
 }
 
 impl Queue<DFTBPlus> for Pbs {
+    fn template(&self) -> &Option<String> {
+        &self.template
+    }
+
+    fn program_cmd(&self, filename: &str) -> String {
+        format!("(cd {filename} && $DFTB_PATH > out)")
+    }
+
     fn default_submit_script(&self) -> String {
         "#!/bin/sh
 #PBS -N {{.basename}}
