@@ -54,7 +54,7 @@ impl Queue<Molpro> for Local {
     }
 
     fn program_cmd(&self, filename: &str) -> String {
-        format!("{} {filename}.mop &> {filename}.out", self.mopac)
+        format!("$MOLPRO_CMD {filename}.inp")
     }
 
     fn default_submit_script(&self) -> String {
