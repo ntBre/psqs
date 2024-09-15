@@ -249,7 +249,7 @@ module load openpbs
 export WORKDIR=$PBS_O_WORKDIR
 cd $WORKDIR
 
-CFOUR_CMD=\"/ddn/home8/r2610/bin/c4ext_new.sh $NCPUS\"
+CFOUR_CMD=\"/ddnlus/r2518/bin/c4ext_new.sh $NCPUS\"
 "
         .to_owned()
     }
