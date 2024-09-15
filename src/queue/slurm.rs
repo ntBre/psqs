@@ -56,17 +56,7 @@ impl Queue<Molpro> for Slurm {
     }
 
     fn default_submit_script(&self) -> String {
-        "#!/bin/bash
-#SBATCH --job-name={{.filename}}
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH -o {{.filename}}.out
-#SBATCH --no-requeue
-#SBATCH --mem=8gb
-
-MOLPRO_CMD=\"/home/qc/bin/molpro2020.sh 1 1\"
-"
-        .to_owned()
+        include_str!("../../templates/slurm/molpro").to_owned()
     }
 }
 
@@ -80,19 +70,7 @@ impl Queue<Mopac> for Slurm {
     }
 
     fn default_submit_script(&self) -> String {
-        "#!/bin/bash
-#SBATCH --job-name=semp
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=1
-#SBATCH -o {{.filename}}.out
-#SBATCH --no-requeue
-#SBATCH --mem=1gb
-export LD_LIBRARY_PATH=/home/qc/mopac2016/
-export MOPAC_CMD=/home/qc/mopac2016/MOPAC2016.exe
-echo $SLURM_JOB_ID
-date
-hostname\n"
-            .to_owned()
+        include_str!("../../templates/slurm/mopac").to_owned()
     }
 }
 
